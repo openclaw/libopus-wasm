@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Nothing yet.
+
 ## 0.1.0 - 2026-05-26
 
 - Initial npm release of `libopus-wasm`, a small ESM-only WebAssembly wrapper around libopus 1.6.1 for raw Opus packet encode/decode in Node 20+ and browsers.
