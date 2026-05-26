@@ -1,14 +1,15 @@
 import { Buffer } from "node:buffer";
-import type { ChannelCount, OpusDecoder, OpusEncoder as CoreOpusEncoder, SampleRate } from "./index.js";
+import type { ChannelCount, OpusDecoderHandle, OpusEncoderHandle, SampleRate } from "./index.js";
 import { createDecoder, createEncoder } from "./index.js";
 
 export class OpusEncoder {
   readonly channels: number;
   readonly rate: number;
   readonly ready: Promise<void>;
-  #decoder: OpusDecoder | undefined;
-  #encoder: CoreOpusEncoder | undefined;
+  #decoder: OpusDecoderHandle | undefined;
+  #encoder: OpusEncoderHandle | undefined;
   #freed = false;
+  #initError: unknown;
 
   constructor(rate = 48_000, channels = 2) {
     this.rate = rate;
@@ -30,7 +31,11 @@ export class OpusEncoder {
       }
       this.#encoder = encoder;
       this.#decoder = decoder;
+    }).catch((error: unknown) => {
+      this.#initError = error;
+      throw error;
     });
+    this.ready.catch(() => undefined);
   }
 
   static async create(rate = 48_000, channels = 2): Promise<OpusEncoder> {
@@ -67,6 +72,14 @@ export class OpusEncoder {
     return this.#requireEncoder().getBitrate();
   }
 
+  setFEC(enabled: boolean): void {
+    this.#requireEncoder().setFec(enabled);
+  }
+
+  setPLP(percentage: number): void {
+    this.#requireEncoder().setPacketLossPercent(percentage);
+  }
+
   free(): void {
     if (this.#freed) {
       return;
@@ -76,18 +89,31 @@ export class OpusEncoder {
     this.#decoder?.free();
   }
 
-  #requireEncoder(): CoreOpusEncoder {
+  [Symbol.dispose](): void {
+    this.free();
+  }
+
+  #requireEncoder(): OpusEncoderHandle {
+    this.#throwInitErrorIfAny();
     if (!this.#encoder || this.#freed) {
       throw new Error("OpusEncoder is not ready; await encoder.ready or use OpusEncoder.create()");
     }
     return this.#encoder;
   }
 
-  #requireDecoder(): OpusDecoder {
+  #requireDecoder(): OpusDecoderHandle {
+    this.#throwInitErrorIfAny();
     if (!this.#decoder || this.#freed) {
       throw new Error("OpusEncoder is not ready; await encoder.ready or use OpusEncoder.create()");
     }
     return this.#decoder;
+  }
+
+  #throwInitErrorIfAny(): void {
+    if (!this.#initError) {
+      return;
+    }
+    throw new Error("OpusEncoder failed to initialize", { cause: this.#initError });
   }
 }
 

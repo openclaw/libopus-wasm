@@ -18,6 +18,16 @@ int oc_encode(
   return opus_encode(encoder, pcm, frame_size, data, max_data_bytes);
 }
 
+int oc_encode_float(
+  OpusEncoder *encoder,
+  const float *pcm,
+  int frame_size,
+  unsigned char *data,
+  opus_int32 max_data_bytes
+) {
+  return opus_encode_float(encoder, pcm, frame_size, data, max_data_bytes);
+}
+
 int oc_encoder_ctl(OpusEncoder *encoder, int request, int value) {
   switch (request) {
     case OPUS_SET_APPLICATION_REQUEST:
@@ -66,6 +76,24 @@ int oc_encoder_ctl_get_bitrate(OpusEncoder *encoder) {
   return bitrate;
 }
 
+int oc_encoder_ctl_get_lookahead(OpusEncoder *encoder) {
+  int lookahead = 0;
+  int error = opus_encoder_ctl(encoder, OPUS_GET_LOOKAHEAD(&lookahead));
+  if (error != OPUS_OK) {
+    return error;
+  }
+  return lookahead;
+}
+
+int oc_encoder_ctl_get_in_dtx(OpusEncoder *encoder) {
+  int in_dtx = 0;
+  int error = opus_encoder_ctl(encoder, OPUS_GET_IN_DTX(&in_dtx));
+  if (error != OPUS_OK) {
+    return error;
+  }
+  return in_dtx;
+}
+
 OpusDecoder *oc_create_decoder(int sample_rate, int channels, int *error) {
   return opus_decoder_create(sample_rate, channels, error);
 }
@@ -83,6 +111,17 @@ int oc_decode(
   int decode_fec
 ) {
   return opus_decode(decoder, data, len, pcm, frame_size, decode_fec);
+}
+
+int oc_decode_float(
+  OpusDecoder *decoder,
+  const unsigned char *data,
+  opus_int32 len,
+  float *pcm,
+  int frame_size,
+  int decode_fec
+) {
+  return opus_decode_float(decoder, data, len, pcm, frame_size, decode_fec);
 }
 
 int oc_decoder_ctl(OpusDecoder *decoder, int request, int value) {

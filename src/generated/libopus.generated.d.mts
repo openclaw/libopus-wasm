@@ -1,6 +1,7 @@
 type LibopusModule = {
   HEAP32: Int32Array;
   HEAP16: Int16Array;
+  HEAPF32: Float32Array;
   HEAPU8: Uint8Array;
   UTF8ToString: (ptr: number) => string;
   _free: (ptr: number) => void;
@@ -20,6 +21,14 @@ type LibopusModule = {
     frameSize: number,
     decodeFec: number,
   ) => number;
+  _oc_decode_float: (
+    decoderPtr: number,
+    packetPtr: number,
+    packetLength: number,
+    pcmPtr: number,
+    frameSize: number,
+    decodeFec: number,
+  ) => number;
   _oc_destroy_decoder: (decoderPtr: number) => void;
   _oc_destroy_encoder: (encoderPtr: number) => void;
   _oc_decoder_ctl: (decoderPtr: number, request: number, value: number) => number;
@@ -30,8 +39,17 @@ type LibopusModule = {
     packetPtr: number,
     maxPacketBytes: number,
   ) => number;
+  _oc_encode_float: (
+    encoderPtr: number,
+    pcmPtr: number,
+    frameSize: number,
+    packetPtr: number,
+    maxPacketBytes: number,
+  ) => number;
   _oc_encoder_ctl: (encoderPtr: number, request: number, value: number) => number;
   _oc_encoder_ctl_get_bitrate: (encoderPtr: number) => number;
+  _oc_encoder_ctl_get_in_dtx: (encoderPtr: number) => number;
+  _oc_encoder_ctl_get_lookahead: (encoderPtr: number) => number;
   _oc_get_version_string: () => number;
   _oc_strerror: (code: number) => number;
 };

@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import { OpusEncoder as DiscordOpusEncoder } from "../src/discordjs.js";
 import {
   Application,
+  Bandwidth,
+  Bitrate,
   DecoderCtl,
   EncoderCtl,
   OpusError,
@@ -48,10 +50,13 @@ describe("libopus-wasm", () => {
       channels: 2,
       complexity: 7,
       frameSize: 960,
-      inBandFec: true,
+      fec: true,
+      maxBandwidth: Bandwidth.Fullband,
       packetLossPercent: 5,
       sampleRate: 48_000,
       signal: Signal.Music,
+      vbr: true,
+      vbrConstraint: true,
     });
     const decoder = await createDecoder({ channels: 2, sampleRate: 48_000 });
     try {
@@ -63,6 +68,8 @@ describe("libopus-wasm", () => {
       expect(packets).toHaveLength(2);
       expect(decoded.map((frame) => frame.length)).toEqual([1920, 1920]);
       expect(encoder.getBitrate()).toBe(64_000);
+      expect(encoder.getLookahead()).toBeGreaterThan(0);
+      expect(encoder.getInDtx()).toBe(false);
     } finally {
       encoder.free();
       decoder.free();
@@ -96,6 +103,59 @@ describe("libopus-wasm", () => {
     }
   });
 
+  it("accepts Opus bitrate sentinels", async () => {
+    const encoder = await createEncoder({ bitrate: "auto" });
+    try {
+      expect(encoder.getBitrate()).toBeGreaterThan(0);
+
+      encoder.setBitrate("max");
+      expect(encoder.getBitrate()).toBeGreaterThan(0);
+
+      encoder.setBitrate(Bitrate.Auto);
+      expect(encoder.getBitrate()).toBeGreaterThan(0);
+    } finally {
+      encoder.free();
+    }
+  });
+
+  it("encodes and decodes Float32 PCM", async () => {
+    const encoder = await createEncoder();
+    const decoder = await createDecoder();
+    try {
+      const packet = encoder.encodeFloat(makeSineFloatFrame(encoder.frameSize, encoder.channels));
+      const decoded = decoder.decodeFloat(packet);
+
+      expect(packet.byteLength).toBeGreaterThan(0);
+      expect(decoded).toBeInstanceOf(Float32Array);
+      expect(decoded.length).toBe(encoder.frameSize * encoder.channels);
+    } finally {
+      encoder.free();
+      decoder.free();
+    }
+  });
+
+  it("synthesizes packet-loss concealment frames", async () => {
+    const encoder = await createEncoder({ fec: true, packetLossPercent: 15 });
+    const decoder = await createDecoder();
+    try {
+      const packet = encoder.encode(makeSineFrame(encoder.frameSize, encoder.channels));
+      decoder.decode(packet);
+
+      const concealed = decoder.decodePacketLoss(encoder.frameSize);
+      const concealedViaNull = decoder.decode(null, { frameSize: encoder.frameSize });
+      const concealedThirtyMs = decoder.decodePacketLoss(1440);
+      const concealedFloat = decoder.decodePacketLossFloat(encoder.frameSize);
+
+      expect(concealed.length).toBe(encoder.frameSize * encoder.channels);
+      expect(concealedViaNull.length).toBe(encoder.frameSize * encoder.channels);
+      expect(concealedThirtyMs.length).toBe(1440 * encoder.channels);
+      expect(concealedFloat.length).toBe(encoder.frameSize * encoder.channels);
+    } finally {
+      encoder.free();
+      decoder.free();
+    }
+  });
+
   it("rejects pointer-style CTL requests at the JS boundary", async () => {
     const encoder = await createEncoder();
     const decoder = await createDecoder();
@@ -120,9 +180,12 @@ describe("libopus-wasm", () => {
   });
 
   it("rejects invalid frame sizes before touching wasm", async () => {
-    const encoder = await createEncoder({ channels: 1 });
+    const encoder = await createEncoder({ channels: 1, sampleRate: 8000 });
     try {
       expect(() => encoder.encode(new Int16Array(0), { frameSize: 0 })).toThrow(RangeError);
+      expect(() => encoder.encode(new Int16Array(5760), { frameSize: 5760 })).toThrow(
+        /samples at 8000 Hz/,
+      );
     } finally {
       encoder.free();
     }
@@ -139,6 +202,8 @@ describe("libopus-wasm", () => {
       opus.applyEncoderCTL(EncoderCtl.SetForceChannels, 2);
       opus.applyDecoderCTL(DecoderCtl.SetPhaseInversionDisabled, 1);
       opus.setBitrate(48_000);
+      opus.setFEC(true);
+      opus.setPLP(10);
 
       expect(packet).toBeInstanceOf(Buffer);
       expect(decoded).toBeInstanceOf(Buffer);
@@ -148,12 +213,37 @@ describe("libopus-wasm", () => {
       opus.free();
     }
   });
+
+  it("surfaces async discord adapter init failures from sync methods", async () => {
+    const opus = new DiscordOpusEncoder(44_100, 2);
+    await expect(opus.ready).rejects.toThrow(RangeError);
+
+    expect(() => opus.encode(Buffer.alloc(960 * 2 * 2))).toThrow(/failed to initialize/);
+  });
+
+  it("supports explicit disposal", async () => {
+    const encoder = await createEncoder();
+    encoder[Symbol.dispose]();
+
+    expect(() => encoder.encode(makeSineFrame(960, 2))).toThrow(/freed/);
+  });
 });
 
 function makeSineFrame(frameSize: number, channels: 1 | 2): Int16Array {
   const pcm = new Int16Array(frameSize * channels);
   for (let sample = 0; sample < frameSize; sample += 1) {
     const value = Math.round(Math.sin((sample / frameSize) * Math.PI * 2) * 8000);
+    for (let channel = 0; channel < channels; channel += 1) {
+      pcm[sample * channels + channel] = value;
+    }
+  }
+  return pcm;
+}
+
+function makeSineFloatFrame(frameSize: number, channels: 1 | 2): Float32Array {
+  const pcm = new Float32Array(frameSize * channels);
+  for (let sample = 0; sample < frameSize; sample += 1) {
+    const value = Math.sin((sample / frameSize) * Math.PI * 2) * 0.25;
     for (let channel = 0; channel < channels; channel += 1) {
       pcm[sample * channels + channel] = value;
     }

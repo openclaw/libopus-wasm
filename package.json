@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "Small, modern WASM bindings for libopus raw packet encode/decode.",
   "type": "module",
+  "sideEffects": false,
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -15,6 +16,7 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "browser": "./dist/index.js",
       "import": "./dist/index.js"
     },
     "./discordjs": {
