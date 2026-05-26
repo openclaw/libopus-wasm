@@ -35,6 +35,7 @@
     "build:wasm": "node scripts/build-libopus-wasm.mjs",
     "benchmark": "pnpm build && node scripts/benchmark-native.mjs",
     "clean": "rm -rf dist .cache",
+    "docs:build": "node scripts/build-docs-site.mjs",
     "prepack": "pnpm build",
     "test": "pnpm build:wasm && vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
