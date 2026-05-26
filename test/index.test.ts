@@ -153,8 +153,27 @@ describe("libopus-wasm", () => {
     }
   });
 
+  it("reports packet metadata at the caller-selected sample rate", async () => {
+    const encoder = await createEncoder({ channels: 1, sampleRate: 16_000 });
+    try {
+      const packet = encoder.encode(makeSineFrame(encoder.frameSize, encoder.channels));
+      const info = await getPacketInfo(packet, { sampleRate: 16_000 });
+
+      expect(info.channels).toBe(1);
+      expect(info.durationMs).toBe(20);
+      expect(info.samples).toBe(320);
+      expect(info.samplesPerFrame).toBe(320);
+      expect(info.sampleRate).toBe(16_000);
+    } finally {
+      encoder.free();
+    }
+  });
+
   it("rejects invalid packet metadata requests", async () => {
     await expect(getPacketInfo(new Uint8Array())).rejects.toThrow(RangeError);
+    await expect(getPacketInfo(new Uint8Array([1]), { sampleRate: 44_100 as 48_000 })).rejects.toThrow(
+      RangeError,
+    );
     await expect(getPacketInfo(new Uint8Array([1, 2, 3, 4]))).rejects.toThrow(OpusError);
   });
 
@@ -197,6 +216,8 @@ describe("libopus-wasm", () => {
   it("returns JS errors for invalid packets", async () => {
     const decoder = await createDecoder();
     try {
+      expect(() => decoder.decode(new Uint8Array())).toThrow(RangeError);
+      expect(() => decoder.decode(null, { decodeFec: true })).toThrow(RangeError);
       expect(() => decoder.decode(new Uint8Array([1, 2, 3, 4]))).toThrow(OpusError);
     } finally {
       decoder.free();
