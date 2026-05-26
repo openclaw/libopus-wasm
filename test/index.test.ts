@@ -11,6 +11,7 @@ import {
   Signal,
   createDecoder,
   createEncoder,
+  getPacketInfo,
   loadLibopus,
 } from "../src/index.js";
 
@@ -132,6 +133,29 @@ describe("libopus-wasm", () => {
       encoder.free();
       decoder.free();
     }
+  });
+
+  it("reports raw packet metadata without decoding", async () => {
+    const encoder = await createEncoder({ frameSize: 960, sampleRate: 48_000 });
+    try {
+      const packet = encoder.encode(makeSineFrame(encoder.frameSize, encoder.channels));
+      const info = await getPacketInfo(packet);
+
+      expect(Object.values(Bandwidth)).toContain(info.bandwidth);
+      expect(info.channels).toBe(2);
+      expect(info.durationMs).toBe(20);
+      expect(info.frames).toBe(1);
+      expect(info.samples).toBe(960);
+      expect(info.samplesPerFrame).toBe(960);
+      expect(info.sampleRate).toBe(48_000);
+    } finally {
+      encoder.free();
+    }
+  });
+
+  it("rejects invalid packet metadata requests", async () => {
+    await expect(getPacketInfo(new Uint8Array())).rejects.toThrow(RangeError);
+    await expect(getPacketInfo(new Uint8Array([1, 2, 3, 4]))).rejects.toThrow(OpusError);
   });
 
   it("synthesizes packet-loss concealment frames", async () => {

@@ -90,6 +90,20 @@ export type EncodeOptions = {
   maxPacketBytes?: number;
 };
 
+export type PacketInfoOptions = {
+  sampleRate?: SampleRate;
+};
+
+export type OpusPacketInfo = {
+  readonly bandwidth: Bandwidth;
+  readonly channels: ChannelCount;
+  readonly durationMs: number;
+  readonly frames: number;
+  readonly samples: number;
+  readonly samplesPerFrame: number;
+  readonly sampleRate: SampleRate;
+};
+
 export type OpusEncoderHandle = {
   readonly application: Application;
   readonly channels: ChannelCount;
@@ -181,6 +195,54 @@ export async function createEncoder(options: EncoderOptions = {}): Promise<OpusE
 export async function createDecoder(options: DecoderOptions = {}): Promise<OpusDecoderHandle> {
   const module = await getModule();
   return new WasmOpusDecoder(module, normalizeDecoderOptions(options));
+}
+
+export async function getPacketInfo(
+  packet: Uint8Array,
+  options: PacketInfoOptions = {},
+): Promise<OpusPacketInfo> {
+  const sampleRate = options.sampleRate ?? DEFAULT_SAMPLE_RATE;
+  validateCodecOptions({ channels: DEFAULT_CHANNELS, sampleRate });
+  if (packet.byteLength === 0) {
+    throw new RangeError("packet must not be empty");
+  }
+  const module = await getModule();
+  const packetPtr = checkedMalloc(module, packet.byteLength);
+  try {
+    module.HEAPU8.set(packet, packetPtr);
+    const decodedSamples = module._oc_packet_validate_decode(packetPtr, packet.byteLength, sampleRate);
+    if (decodedSamples < 0) {
+      throw createOpusError(module, decodedSamples, "getPacketInfo");
+    }
+    const frames = module._oc_packet_parse(packetPtr, packet.byteLength);
+    if (frames < 0) {
+      throw createOpusError(module, frames, "getPacketInfo");
+    }
+    const samples = module._oc_packet_get_nb_samples(packetPtr, packet.byteLength, sampleRate);
+    if (samples < 0) {
+      throw createOpusError(module, samples, "getPacketInfo");
+    }
+    const channels = module._oc_packet_get_nb_channels(packetPtr);
+    if (channels !== 1 && channels !== 2) {
+      throw new OpusError(channels, `libopus getPacketInfo failed (${channels}): invalid channel count`);
+    }
+    const bandwidth = module._oc_packet_get_bandwidth(packetPtr);
+    if (bandwidth < 0) {
+      throw createOpusError(module, bandwidth, "getPacketInfo");
+    }
+    validateBandwidth(bandwidth as Bandwidth, "packet bandwidth");
+    return {
+      bandwidth: bandwidth as Bandwidth,
+      channels,
+      durationMs: (samples / sampleRate) * 1000,
+      frames,
+      samples,
+      samplesPerFrame: module._oc_packet_get_samples_per_frame(packetPtr, sampleRate),
+      sampleRate,
+    };
+  } finally {
+    module._free(packetPtr);
+  }
 }
 
 class WasmOpusEncoder implements OpusEncoderHandle {

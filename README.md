@@ -29,13 +29,14 @@ ESM-only; Node 20+ or any current browser. No `@types` install needed.
 ## Quick start
 
 ```ts
-import { createEncoder, createDecoder } from "libopus-wasm";
+import { createDecoder, createEncoder, getPacketInfo } from "libopus-wasm";
 
 const encoder = await createEncoder(); // 48 kHz, stereo, 20 ms, audio
 const decoder = await createDecoder();
 
 const pcm = new Int16Array(encoder.frameSize * encoder.channels); // 960 * 2
 const packet = encoder.encode(pcm);    // Uint8Array — one raw Opus packet
+const info = await getPacketInfo(packet); // duration, frames, bandwidth
 const frame = decoder.decode(packet);  // Int16Array — interleaved PCM
 
 encoder.free();
@@ -149,6 +150,7 @@ Full reference with every option and constant lives at
 | `loadLibopus()` | `Promise<{ version }>` | Loads the module; returns the bundled libopus version. |
 | `createEncoder(options?)` | `Promise<OpusEncoderHandle>` | Create a raw-packet encoder. |
 | `createDecoder(options?)` | `Promise<OpusDecoderHandle>` | Create a raw-packet decoder. |
+| `getPacketInfo(packet, options?)` | `Promise<OpusPacketInfo>` | Validate a raw packet and return duration, frame count, channels, and bandwidth. |
 
 ### Encoder
 

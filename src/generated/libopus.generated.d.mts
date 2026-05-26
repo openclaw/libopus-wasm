@@ -51,6 +51,21 @@ type LibopusModule = {
   _oc_encoder_ctl_get_in_dtx: (encoderPtr: number) => number;
   _oc_encoder_ctl_get_lookahead: (encoderPtr: number) => number;
   _oc_get_version_string: () => number;
+  _oc_packet_get_bandwidth: (packetPtr: number) => number;
+  _oc_packet_get_nb_channels: (packetPtr: number) => number;
+  _oc_packet_get_nb_frames: (packetPtr: number, packetLength: number) => number;
+  _oc_packet_get_nb_samples: (
+    packetPtr: number,
+    packetLength: number,
+    sampleRate: number,
+  ) => number;
+  _oc_packet_get_samples_per_frame: (packetPtr: number, sampleRate: number) => number;
+  _oc_packet_parse: (packetPtr: number, packetLength: number) => number;
+  _oc_packet_validate_decode: (
+    packetPtr: number,
+    packetLength: number,
+    sampleRate: number,
+  ) => number;
   _oc_strerror: (code: number) => number;
 };
 

@@ -124,6 +124,51 @@ int oc_decode_float(
   return opus_decode_float(decoder, data, len, pcm, frame_size, decode_fec);
 }
 
+int oc_packet_get_bandwidth(const unsigned char *data) {
+  return opus_packet_get_bandwidth(data);
+}
+
+int oc_packet_get_nb_channels(const unsigned char *data) {
+  return opus_packet_get_nb_channels(data);
+}
+
+int oc_packet_get_nb_frames(const unsigned char *data, opus_int32 len) {
+  return opus_packet_get_nb_frames(data, len);
+}
+
+int oc_packet_get_nb_samples(const unsigned char *data, opus_int32 len, opus_int32 sample_rate) {
+  return opus_packet_get_nb_samples(data, len, sample_rate);
+}
+
+int oc_packet_get_samples_per_frame(const unsigned char *data, opus_int32 sample_rate) {
+  return opus_packet_get_samples_per_frame(data, sample_rate);
+}
+
+int oc_packet_parse(const unsigned char *data, opus_int32 len) {
+  unsigned char toc = 0;
+  const unsigned char *frames[48] = {0};
+  opus_int16 frame_sizes[48] = {0};
+  int payload_offset = 0;
+  return opus_packet_parse(data, len, &toc, frames, frame_sizes, &payload_offset);
+}
+
+int oc_packet_validate_decode(const unsigned char *data, opus_int32 len, opus_int32 sample_rate) {
+  int channels = opus_packet_get_nb_channels(data);
+  if (channels != 1 && channels != 2) {
+    return OPUS_INVALID_PACKET;
+  }
+  int error = OPUS_OK;
+  OpusDecoder *decoder = opus_decoder_create(sample_rate, channels, &error);
+  if (error != OPUS_OK || decoder == 0) {
+    return error;
+  }
+  opus_int16 pcm[5760 * 2] = {0};
+  int max_frame_size = (sample_rate / 1000) * 120;
+  int decoded = opus_decode(decoder, data, len, pcm, max_frame_size, 0);
+  opus_decoder_destroy(decoder);
+  return decoded;
+}
+
 int oc_decoder_ctl(OpusDecoder *decoder, int request, int value) {
   switch (request) {
     case OPUS_SET_GAIN_REQUEST:
