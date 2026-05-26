@@ -1,6 +1,6 @@
 {
   "name": "libopus-wasm",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Small, modern WASM bindings for libopus raw packet encode/decode.",
   "type": "module",
   "sideEffects": false,
@@ -25,7 +25,10 @@
     }
   },
   "files": [
-    "dist",
+    "dist/*.d.ts",
+    "dist/*.d.ts.map",
+    "dist/*.js",
+    "dist/generated",
     "CHANGELOG.md",
     "LICENSE",
     "README.md",
