@@ -16,6 +16,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./discordjs": {
+      "types": "./dist/discordjs.d.ts",
+      "import": "./dist/discordjs.js"
     }
   },
   "files": [

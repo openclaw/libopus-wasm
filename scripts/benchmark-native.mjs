@@ -22,19 +22,19 @@ const native = new NativeOpusEncoder(sampleRate, channels);
 native.setBitrate(64_000);
 
 try {
-  const wasmPacket = wasmEncoder.encodePcm16(pcm, frameSize);
+  const wasmPacket = wasmEncoder.encode(pcm, { frameSize });
   const nativePacket = native.encode(pcmBuffer, frameSize);
   const libopus = await loadLibopus();
 
   const results = [
     bench("wasm encode", warmupIterations, iterations, () => {
-      wasmEncoder.encodePcm16(pcm, frameSize);
+      wasmEncoder.encode(pcm, { frameSize });
     }),
     bench("native encode", warmupIterations, iterations, () => {
       native.encode(pcmBuffer, frameSize);
     }),
     bench("wasm decode", warmupIterations, iterations, () => {
-      wasmDecoder.decodeFrame(wasmPacket, frameSize);
+      wasmDecoder.decode(wasmPacket, { maxFrameSize: frameSize });
     }),
     bench("native decode", warmupIterations, iterations, () => {
       native.decode(nativePacket, frameSize);

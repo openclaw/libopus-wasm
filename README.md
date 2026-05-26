@@ -4,8 +4,8 @@
 
 Small, modern WASM bindings for libopus raw packet encode/decode.
 
-This package targets the narrow realtime voice use case: 48 kHz PCM and raw
-Opus packets, with no Ogg/WebM container layer.
+The default path is Discord/realtime voice ready: 48 kHz, stereo, 20 ms PCM
+frames, raw Opus packets, no Ogg/WebM container layer.
 
 ## Install
 
@@ -16,25 +16,43 @@ npm install libopus-wasm
 ## Usage
 
 ```ts
-import { Application, createDecoder, createEncoder } from "libopus-wasm";
+import { createDecoder, createEncoder } from "libopus-wasm";
 
-const encoder = await createEncoder({
-  sampleRate: 48_000,
-  channels: 2,
-  application: Application.Audio,
-});
-const decoder = await createDecoder({ sampleRate: 48_000, channels: 2 });
+const encoder = await createEncoder();
+const decoder = await createDecoder();
 
 try {
-  const frameSize = 960; // 20 ms at 48 kHz
-  const pcm = new Int16Array(frameSize * 2);
-  const packet = encoder.encodePcm16(pcm, frameSize);
-  const decoded = decoder.decodeFrame(packet, frameSize);
+  const pcm = new Int16Array(960 * 2);
+  const packet = encoder.encode(pcm);
+  const decoded = decoder.decode(packet);
   console.log(decoded.length);
 } finally {
   encoder.free();
   decoder.free();
 }
+```
+
+## Compatibility
+
+`libopus-wasm/discordjs` provides an async-ready adapter for the
+`@discordjs/opus` method shape:
+
+```ts
+import { OpusEncoder } from "libopus-wasm/discordjs";
+
+const opus = await OpusEncoder.create(48_000, 2);
+
+const packet = opus.encode(pcmBuffer);
+const decoded = opus.decode(packet);
+opus.setBitrate(64_000);
+opus.free();
+```
+
+You can also construct it directly and await `ready`:
+
+```ts
+const opus = new OpusEncoder(48_000, 2);
+await opus.ready;
 ```
 
 ## Build
@@ -55,11 +73,14 @@ SHA-256, builds it with Emscripten, and emits a single-file ES module under
 ## API
 
 - `loadLibopus()`: returns the bundled libopus version string.
-- `createEncoder(options)`: creates a raw packet encoder.
-- `createDecoder(options)`: creates a raw packet decoder.
-- `encoder.encodePcm16(pcm, frameSize)`: encodes one PCM frame.
-- `decoder.decodeFrame(packet, frameSize)`: decodes one raw Opus packet.
-- `encoder.setBitrate`, `encoder.setFec`, `encoder.setPacketLossPercent`: small CTL surface for realtime voice tuning.
+- `createEncoder(options?)`: creates a raw packet encoder. Defaults: 48 kHz, stereo, 20 ms, audio application.
+- `createDecoder(options?)`: creates a raw packet decoder. Defaults: 48 kHz, stereo, max 120 ms packet output.
+- `encoder.encode(pcm, options?)`: encodes one signed 16-bit little-endian PCM frame.
+- `encoder.encodeFrames(frames, options?)`: encodes several PCM frames.
+- `decoder.decode(packet, options?)`: decodes one raw Opus packet to signed 16-bit little-endian PCM.
+- `decoder.decodeFrames(packets, options?)`: decodes several raw Opus packets.
+- `encoder.setBitrate`, `encoder.getBitrate`, `encoder.setComplexity`, `encoder.setInBandFec`, `encoder.setPacketLossPercent`, `encoder.setDtx`, `encoder.setSignal`: named CTL helpers.
+- `encoder.encoderCtl(request, value)` and `decoder.decoderCtl(request, value)`: integer setter CTL escape hatches.
 - `free()`: releases the underlying libopus encoder/decoder.
 
 Supported sample rates are `8000`, `12000`, `16000`, `24000`, and `48000`.

@@ -18,16 +18,52 @@ int oc_encode(
   return opus_encode(encoder, pcm, frame_size, data, max_data_bytes);
 }
 
-int oc_encoder_ctl_set_bitrate(OpusEncoder *encoder, int bitrate) {
-  return opus_encoder_ctl(encoder, OPUS_SET_BITRATE(bitrate));
+int oc_encoder_ctl(OpusEncoder *encoder, int request, int value) {
+  switch (request) {
+    case OPUS_SET_APPLICATION_REQUEST:
+      return opus_encoder_ctl(encoder, OPUS_SET_APPLICATION(value));
+    case OPUS_SET_BITRATE_REQUEST:
+      return opus_encoder_ctl(encoder, OPUS_SET_BITRATE(value));
+    case OPUS_SET_MAX_BANDWIDTH_REQUEST:
+      return opus_encoder_ctl(encoder, OPUS_SET_MAX_BANDWIDTH(value));
+    case OPUS_SET_VBR_REQUEST:
+      return opus_encoder_ctl(encoder, OPUS_SET_VBR(value));
+    case OPUS_SET_BANDWIDTH_REQUEST:
+      return opus_encoder_ctl(encoder, OPUS_SET_BANDWIDTH(value));
+    case OPUS_SET_COMPLEXITY_REQUEST:
+      return opus_encoder_ctl(encoder, OPUS_SET_COMPLEXITY(value));
+    case OPUS_SET_INBAND_FEC_REQUEST:
+      return opus_encoder_ctl(encoder, OPUS_SET_INBAND_FEC(value));
+    case OPUS_SET_PACKET_LOSS_PERC_REQUEST:
+      return opus_encoder_ctl(encoder, OPUS_SET_PACKET_LOSS_PERC(value));
+    case OPUS_SET_DTX_REQUEST:
+      return opus_encoder_ctl(encoder, OPUS_SET_DTX(value));
+    case OPUS_SET_VBR_CONSTRAINT_REQUEST:
+      return opus_encoder_ctl(encoder, OPUS_SET_VBR_CONSTRAINT(value));
+    case OPUS_SET_FORCE_CHANNELS_REQUEST:
+      return opus_encoder_ctl(encoder, OPUS_SET_FORCE_CHANNELS(value));
+    case OPUS_SET_SIGNAL_REQUEST:
+      return opus_encoder_ctl(encoder, OPUS_SET_SIGNAL(value));
+    case OPUS_SET_LSB_DEPTH_REQUEST:
+      return opus_encoder_ctl(encoder, OPUS_SET_LSB_DEPTH(value));
+    case OPUS_SET_EXPERT_FRAME_DURATION_REQUEST:
+      return opus_encoder_ctl(encoder, OPUS_SET_EXPERT_FRAME_DURATION(value));
+    case OPUS_SET_PREDICTION_DISABLED_REQUEST:
+      return opus_encoder_ctl(encoder, OPUS_SET_PREDICTION_DISABLED(value));
+    case OPUS_SET_PHASE_INVERSION_DISABLED_REQUEST:
+      return opus_encoder_ctl(encoder, OPUS_SET_PHASE_INVERSION_DISABLED(value));
+    default:
+      return OPUS_UNIMPLEMENTED;
+  }
 }
 
-int oc_encoder_ctl_set_fec(OpusEncoder *encoder, int enabled) {
-  return opus_encoder_ctl(encoder, OPUS_SET_INBAND_FEC(enabled));
-}
-
-int oc_encoder_ctl_set_packet_loss_percent(OpusEncoder *encoder, int percentage) {
-  return opus_encoder_ctl(encoder, OPUS_SET_PACKET_LOSS_PERC(percentage));
+int oc_encoder_ctl_get_bitrate(OpusEncoder *encoder) {
+  opus_int32 bitrate = 0;
+  int error = opus_encoder_ctl(encoder, OPUS_GET_BITRATE(&bitrate));
+  if (error != OPUS_OK) {
+    return error;
+  }
+  return bitrate;
 }
 
 OpusDecoder *oc_create_decoder(int sample_rate, int channels, int *error) {
@@ -47,6 +83,17 @@ int oc_decode(
   int decode_fec
 ) {
   return opus_decode(decoder, data, len, pcm, frame_size, decode_fec);
+}
+
+int oc_decoder_ctl(OpusDecoder *decoder, int request, int value) {
+  switch (request) {
+    case OPUS_SET_GAIN_REQUEST:
+      return opus_decoder_ctl(decoder, OPUS_SET_GAIN(value));
+    case OPUS_SET_PHASE_INVERSION_DISABLED_REQUEST:
+      return opus_decoder_ctl(decoder, OPUS_SET_PHASE_INVERSION_DISABLED(value));
+    default:
+      return OPUS_UNIMPLEMENTED;
+  }
 }
 
 const char *oc_strerror(int code) {
