@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Nothing yet.
+- Add coverage tooling and broaden validation-path tests.
 
 ## 0.1.0 - 2026-05-26
 

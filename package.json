@@ -42,11 +42,13 @@
     "docs:build": "node scripts/build-docs-site.mjs",
     "prepack": "pnpm build",
     "test": "pnpm build:wasm && vitest run",
+    "test:coverage": "pnpm build:wasm && vitest run --coverage",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
     "@discordjs/opus": "0.10.0",
     "@types/node": "24.10.2",
+    "@vitest/coverage-v8": "4.0.14",
     "typescript": "5.9.3",
     "vitest": "4.0.14"
   },

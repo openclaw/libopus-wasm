@@ -125,10 +125,13 @@ describe("libopus-wasm", () => {
     try {
       const packet = encoder.encodeFloat(makeSineFloatFrame(encoder.frameSize, encoder.channels));
       const decoded = decoder.decodeFloat(packet);
+      const decodedBatch = decoder.decodeFloatFrames([packet]);
 
       expect(packet.byteLength).toBeGreaterThan(0);
       expect(decoded).toBeInstanceOf(Float32Array);
       expect(decoded.length).toBe(encoder.frameSize * encoder.channels);
+      expect(decodedBatch).toHaveLength(1);
+      expect(decodedBatch[0]?.length).toBe(encoder.frameSize * encoder.channels);
     } finally {
       encoder.free();
       decoder.free();
@@ -231,8 +234,51 @@ describe("libopus-wasm", () => {
       expect(() => encoder.encode(new Int16Array(5760), { frameSize: 5760 })).toThrow(
         /samples at 8000 Hz/,
       );
+      expect(() => encoder.encode(makeSineFrame(160, 1), { maxPacketBytes: 0 })).toThrow(RangeError);
+      expect(() => encoder.encodeFloat(new Float32Array(0), { frameSize: 160 })).toThrow(RangeError);
     } finally {
       encoder.free();
+    }
+  });
+
+  it("rejects invalid codec and tuning options", async () => {
+    await expect(createEncoder({ sampleRate: 44_100 as 48_000 })).rejects.toThrow(RangeError);
+    await expect(createDecoder({ channels: 3 as 2 })).rejects.toThrow(RangeError);
+    await expect(createEncoder({ frameSize: 123 })).rejects.toThrow(RangeError);
+    await expect(createDecoder({ maxFrameSize: 0 })).rejects.toThrow(RangeError);
+    await expect(createEncoder({ maxBandwidth: 9999 as Bandwidth })).rejects.toThrow(RangeError);
+
+    const encoder = await createEncoder();
+    try {
+      expect(() => encoder.setComplexity(11)).toThrow(RangeError);
+      expect(() => encoder.setPacketLossPercent(101)).toThrow(RangeError);
+      expect(() => encoder.setMaxBandwidth(9999 as Bandwidth)).toThrow(RangeError);
+      expect(() => encoder.setSignal(9999 as Signal)).toThrow(RangeError);
+      expect(() => encoder.setBitrate(0)).toThrow(RangeError);
+      expect(() => encoder.encoderCtl(EncoderCtl.SetBitrate + 0.5, 32_000)).toThrow(RangeError);
+      expect(() => encoder.encoderCtl(EncoderCtl.SetBitrate, 32_000.5)).toThrow(RangeError);
+    } finally {
+      encoder.free();
+    }
+  });
+
+  it("validates decode capacity and freed decoders", async () => {
+    const encoder = await createEncoder();
+    const decoder = await createDecoder();
+    try {
+      const packet = encoder.encode(makeSineFrame(encoder.frameSize, encoder.channels));
+
+      expect(() => decoder.decode(packet, { maxFrameSize: 0 })).toThrow(RangeError);
+      expect(() => decoder.decode(null, { frameSize: 119 })).toThrow(RangeError);
+      expect(() => decoder.decoderCtl(DecoderCtl.SetGain + 0.5, 0)).toThrow(RangeError);
+      expect(() => decoder.decoderCtl(DecoderCtl.SetGain, 0.5)).toThrow(RangeError);
+
+      decoder[Symbol.dispose]();
+      decoder.free();
+      expect(() => decoder.decode(packet)).toThrow(/freed/);
+    } finally {
+      encoder.free();
+      decoder.free();
     }
   });
 
@@ -264,6 +310,23 @@ describe("libopus-wasm", () => {
     await expect(opus.ready).rejects.toThrow(RangeError);
 
     expect(() => opus.encode(Buffer.alloc(960 * 2 * 2))).toThrow(/failed to initialize/);
+  });
+
+  it("guards discord adapter readiness, frame sizing, and disposal", async () => {
+    const pending = new DiscordOpusEncoder();
+    try {
+      expect(() => pending.encode(Buffer.alloc(960 * 2 * 2))).toThrow(/not ready/);
+    } finally {
+      pending.free();
+      await pending.ready;
+    }
+
+    const opus = await DiscordOpusEncoder.create();
+    expect(() => opus.encode(Buffer.alloc(1))).toThrow(RangeError);
+    opus[Symbol.dispose]();
+    opus.free();
+    expect(() => opus.encode(Buffer.alloc(960 * 2 * 2))).toThrow(/not ready/);
+    expect(() => opus.decode(Buffer.from([1, 2, 3]))).toThrow(/not ready/);
   });
 
   it("supports explicit disposal", async () => {
