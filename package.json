@@ -9,7 +9,7 @@
     "type": "git",
     "url": "git+https://github.com/openclaw/libopus-wasm.git"
   },
-  "homepage": "https://github.com/openclaw/libopus-wasm#readme",
+  "homepage": "https://libopus-wasm.dev",
   "bugs": {
     "url": "https://github.com/openclaw/libopus-wasm/issues"
   },
