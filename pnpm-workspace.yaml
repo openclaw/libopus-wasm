@@ -1,0 +1,7 @@
+allowBuilds:
+  '@discordjs/opus': true
+  esbuild: true
+
+onlyBuiltDependencies:
+  - '@discordjs/opus'
+  - esbuild

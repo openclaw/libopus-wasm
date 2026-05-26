@@ -1,0 +1,45 @@
+{
+  "name": "libopus-wasm",
+  "version": "0.0.1",
+  "description": "Small, modern WASM bindings for libopus raw packet encode/decode.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/openclaw/libopus-wasm.git"
+  },
+  "homepage": "https://github.com/openclaw/libopus-wasm#readme",
+  "bugs": {
+    "url": "https://github.com/openclaw/libopus-wasm/issues"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "scripts": {
+    "build": "pnpm build:wasm && tsc -p tsconfig.json && node scripts/copy-generated.mjs",
+    "build:wasm": "node scripts/build-libopus-wasm.mjs",
+    "benchmark": "pnpm build && node scripts/benchmark-native.mjs",
+    "clean": "rm -rf dist .cache",
+    "prepack": "pnpm build",
+    "test": "pnpm build:wasm && vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@discordjs/opus": "0.10.0",
+    "@types/node": "24.10.2",
+    "typescript": "5.9.3",
+    "vitest": "4.0.14"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
