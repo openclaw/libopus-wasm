@@ -1,3 +1,5 @@
+![libopus-wasm banner](docs/assets/readme-banner.jpg)
+
 # libopus-wasm
 
 [![CI](https://github.com/openclaw/libopus-wasm/actions/workflows/ci.yml/badge.svg)](https://github.com/openclaw/libopus-wasm/actions/workflows/ci.yml)
