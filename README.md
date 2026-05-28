@@ -1,6 +1,6 @@
-![libopus-wasm banner](docs/assets/readme-banner.jpg)
-
 # libopus-wasm
+
+![libopus-wasm banner](docs/assets/readme-banner.jpg)
 
 [![CI](https://github.com/openclaw/libopus-wasm/actions/workflows/ci.yml/badge.svg)](https://github.com/openclaw/libopus-wasm/actions/workflows/ci.yml)
 [![Docs](https://img.shields.io/badge/docs-libopus--wasm.dev-6d4aff)](https://libopus-wasm.dev)
