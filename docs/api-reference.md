@@ -8,6 +8,7 @@ import {
   loadLibopus,
   createEncoder,
   createDecoder,
+  getPacketInfo,
   Application,
   Signal,
   Bitrate,
@@ -25,6 +26,7 @@ import {
 | `loadLibopus()` | `Promise<{ version: string }>` | Loads the module and returns the bundled libopus version string. |
 | `createEncoder(options?)` | `Promise<OpusEncoderHandle>` | Creates a raw-packet encoder. See [EncoderOptions](#encoderoptions). |
 | `createDecoder(options?)` | `Promise<OpusDecoderHandle>` | Creates a raw-packet decoder. See [DecoderOptions](#decoderoptions). |
+| `getPacketInfo(packet, options?)` | `Promise<OpusPacketInfo>` | Inspects a raw packet — duration, frames, channels, bandwidth — without decoding. See [Packet inspection](packet-info.md). |
 
 Both factories share one lazily-loaded WASM module, so the first call pays the
 load cost and later calls are cheap.
@@ -202,7 +204,8 @@ Integer request codes for the CTL passthrough. See the
 
 Argument validation (wrong frame size, out-of-range option, empty packet,
 non-allow-listed CTL) throws a plain `RangeError` _before_ reaching WASM. Using a
-handle after `free()` throws a plain `Error`.
+handle after `free()` throws a plain `Error`. See [Errors & validation](errors.md)
+for the full breakdown.
 
 ## Limits
 
@@ -226,6 +229,8 @@ import type {
   DecoderOptions,
   EncodeOptions,
   DecodeOptions,
+  PacketInfoOptions,
+  OpusPacketInfo,
   SampleRate,
   ChannelCount,
 } from "libopus-wasm";

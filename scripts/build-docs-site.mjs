@@ -20,10 +20,10 @@ const installCommand = "npm install libopus-wasm";
 
 const sections = [
   ["Start", ["index.md", "install.md", "quickstart.md"]],
-  ["Encode & decode", ["encoding.md", "decoding.md", "packet-loss.md"]],
+  ["Encode & decode", ["encoding.md", "decoding.md", "packet-loss.md", "packet-info.md"]],
   ["Tuning", ["encoder-tuning.md", "ctl.md"]],
   ["Integrations", ["discordjs.md", "browser.md"]],
-  ["Reference", ["api-reference.md", "building.md", "benchmark.md"]],
+  ["Reference", ["api-reference.md", "errors.md", "building.md", "benchmark.md"]],
 ];
 
 // Pages that exist under docs/ but should not be emitted as their own HTML files.

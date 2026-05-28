@@ -51,6 +51,8 @@ hook, no second `.wasm` request, and no native build step at install time.
   variable packet durations.
 - **Handling loss.** [Packet loss](packet-loss.md) walks through FEC and PLC for
   realtime streams.
+- **Inspecting packets.** [Packet inspection](packet-info.md) reads a packet's
+  duration, frames, and bandwidth without decoding it.
 - **Tuning quality and bitrate.** [Encoder tuning](encoder-tuning.md) and the
   [CTL reference](ctl.md).
 - **Coming from Discord.** [discord.js compatibility](discordjs.md) is a near
@@ -59,6 +61,8 @@ hook, no second `.wasm` request, and no native build step at install time.
   Audio capture.
 - **Looking up a method.** The [API reference](api-reference.md) lists every
   function, option, and constant.
+- **Handling failures.** [Errors & validation](errors.md) explains when a call
+  throws `RangeError` versus `OpusError`.
 
 ## Project
 

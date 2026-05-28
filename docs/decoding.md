@@ -96,4 +96,5 @@ zero-length buffer.
 ## Next
 
 - [Packet loss](packet-loss.md) — conceal dropped packets and recover with FEC.
+- [Errors & validation](errors.md) — `RangeError` vs `OpusError`, empty vs lost.
 - [API reference](api-reference.md) — full decoder method list.

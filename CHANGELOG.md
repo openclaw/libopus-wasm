@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Add coverage tooling and broaden validation-path tests.
+- Add dedicated docs pages for packet inspection (`getPacketInfo`) and error handling, list `getPacketInfo` in the API reference, and wire both into the site navigation.
 
 ## 0.1.0 - 2026-05-26
 
