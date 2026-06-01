@@ -8,10 +8,12 @@ import {
   DecoderCtl,
   EncoderCtl,
   OpusError,
+  OpusErrorCode,
   Signal,
   createDecoder,
   createEncoder,
   getPacketInfo,
+  isOpusError,
   loadLibopus,
 } from "../src/index.js";
 
@@ -221,7 +223,29 @@ describe("libopus-wasm", () => {
     try {
       expect(() => decoder.decode(new Uint8Array())).toThrow(RangeError);
       expect(() => decoder.decode(null, { decodeFec: true })).toThrow(RangeError);
-      expect(() => decoder.decode(new Uint8Array([1, 2, 3, 4]))).toThrow(OpusError);
+      let error: unknown;
+      try {
+        decoder.decode(new Uint8Array([1, 2, 3, 4]));
+      } catch (err) {
+        error = err;
+      }
+
+      expect(error).toBeInstanceOf(OpusError);
+      expect(isOpusError(error)).toBe(true);
+      expect(error).toMatchObject({
+        code: OpusErrorCode.InvalidPacket,
+        codeName: "InvalidPacket",
+        operation: "decode",
+      });
+      expect(
+        isOpusError({
+          name: "OpusError",
+          message: "libopus decode failed (-4): corrupted stream",
+          code: OpusErrorCode.InvalidPacket,
+          codeName: "InvalidPacket",
+          operation: "decode",
+        }),
+      ).toBe(true);
     } finally {
       decoder.free();
     }

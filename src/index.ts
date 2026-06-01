@@ -699,19 +699,64 @@ class WasmOpusDecoder implements OpusDecoderHandle {
 
 export class OpusError extends Error {
   readonly code: number;
+  readonly codeName: OpusErrorCodeName | undefined;
   readonly operation: string | undefined;
 
   constructor(code: number, message: string, operation?: string) {
     super(message);
     this.name = "OpusError";
     this.code = code;
+    this.codeName = resolveOpusErrorCodeName(code);
     this.operation = operation;
   }
+}
+
+export const OpusErrorCode = {
+  BadArg: -1,
+  BufferTooSmall: -2,
+  InternalError: -3,
+  InvalidPacket: -4,
+  Unimplemented: -5,
+  InvalidState: -6,
+  AllocFail: -7,
+} as const;
+
+export type OpusErrorCodeName = keyof typeof OpusErrorCode;
+
+export function isOpusError(error: unknown): error is OpusError {
+  if (error instanceof OpusError) {
+    return true;
+  }
+  const candidate = error as {
+    code?: unknown;
+    codeName?: unknown;
+    message?: unknown;
+    name?: unknown;
+    operation?: unknown;
+  };
+  return (
+    Boolean(error) &&
+    typeof error === "object" &&
+    candidate.name === "OpusError" &&
+    typeof candidate.message === "string" &&
+    typeof candidate.code === "number" &&
+    (typeof candidate.codeName === "string" || candidate.codeName === undefined) &&
+    (typeof candidate.operation === "string" || candidate.operation === undefined)
+  );
 }
 
 async function getModule(): Promise<LibopusModule> {
   modulePromise ??= createLibopusModule();
   return await modulePromise;
+}
+
+function resolveOpusErrorCodeName(code: number): OpusErrorCodeName | undefined {
+  for (const [name, value] of Object.entries(OpusErrorCode)) {
+    if (value === code) {
+      return name as OpusErrorCodeName;
+    }
+  }
+  return undefined;
 }
 
 function createOpusError(module: LibopusModule, code: number, operation: string): OpusError {

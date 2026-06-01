@@ -192,7 +192,8 @@ Read-only: `channels`, `maxFrameSize`, `sampleRate`.
 `Bitrate` (`Auto`, `Max`) ·
 `Bandwidth` (`Narrowband`…`Fullband`) ·
 `EncoderCtl` / `DecoderCtl` request codes ·
-`OpusError` (`code`, `operation`).
+`OpusError` (`code`, `codeName`, `operation`) ·
+`OpusErrorCode` · `isOpusError`.
 
 ### Supported formats
 

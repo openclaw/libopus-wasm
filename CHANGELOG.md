@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add named Opus error codes, `codeName` metadata, and `isOpusError()` for structured libopus error handling.
 - Add coverage tooling and broaden validation-path tests.
 - Add dedicated docs pages for packet inspection (`getPacketInfo`) and error handling, list `getPacketInfo` in the API reference, and wire both into the site navigation.
 

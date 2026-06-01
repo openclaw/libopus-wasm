@@ -16,6 +16,8 @@ import {
   EncoderCtl,
   DecoderCtl,
   OpusError,
+  OpusErrorCode,
+  isOpusError,
 } from "libopus-wasm";
 ```
 
@@ -199,8 +201,12 @@ Integer request codes for the CTL passthrough. See the
 | Member | Type | Description |
 | --- | --- | --- |
 | `code` | `number` | The libopus error code. |
+| `codeName` | `string \| undefined` | Named libopus error code, such as `"InvalidPacket"`, when known. |
 | `operation` | `string \| undefined` | The call that failed (e.g. `"decode"`). |
 | `message` | `string` | Human-readable libopus error text. |
+
+Use `OpusErrorCode` for named libopus error codes and `isOpusError(error)` for
+realm-safe checks.
 
 Argument validation (wrong frame size, out-of-range option, empty packet,
 non-allow-listed CTL) throws a plain `RangeError` _before_ reaching WASM. Using a

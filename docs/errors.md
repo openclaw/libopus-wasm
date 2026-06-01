@@ -27,14 +27,15 @@ When libopus itself returns an error code — a malformed packet handed to
 `decode` or `getPacketInfo`, for example — it surfaces as an `OpusError`:
 
 ```ts
-import { OpusError } from "libopus-wasm";
+import { OpusErrorCode, isOpusError } from "libopus-wasm";
 
 try {
   decoder.decode(corruptPacket);
 } catch (err) {
-  if (err instanceof OpusError) {
-    console.error(err.operation, err.code, err.message);
-    // e.g. "decode" -4 "libopus decode failed (-4): invalid packet"
+  if (isOpusError(err)) {
+    if (err.operation === "decode" && err.code === OpusErrorCode.InvalidPacket) {
+      // Drop or conceal this corrupt packet.
+    }
   }
 }
 ```
@@ -42,10 +43,12 @@ try {
 | Member | Type | Description |
 | --- | --- | --- |
 | `code` | `number` | The raw libopus error code (negative). |
+| `codeName` | `string \| undefined` | Named libopus error code, such as `"InvalidPacket"`, when known. |
 | `operation` | `string \| undefined` | The call that failed — `"decode"`, `"encode"`, `"getPacketInfo"`, … |
 | `message` | `string` | libopus's own error text, prefixed with the operation and code. |
 
-`OpusError extends Error`, so `instanceof Error` matches it too.
+`OpusError extends Error`, so `instanceof Error` matches it too. Use
+`isOpusError()` when errors may cross package or realm boundaries.
 
 ## Empty vs. lost packets
 
