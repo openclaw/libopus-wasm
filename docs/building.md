@@ -8,7 +8,7 @@ toolchain, pin a different libopus, or hack on the bindings.
 
 - [Emscripten](https://emscripten.org/) (`emcc`) on your `PATH`.
 - [pnpm](https://pnpm.io/) — the repo's package manager.
-- Node 20 or newer.
+- Node 22 or newer.
 
 Verify the toolchain:
 

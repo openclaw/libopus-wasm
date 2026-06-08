@@ -26,7 +26,7 @@ packets, no Ogg/WebM container layer.
 npm install libopus-wasm
 ```
 
-ESM-only; Node 20+ or any current browser. No `@types` install needed.
+ESM-only; Node 22+ or any current browser. No `@types` install needed.
 
 ## Quick start
 

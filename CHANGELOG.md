@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Require Node.js 22 or newer for the npm package, matching the maintained CI matrix.
+
 ## 0.2.0 - 2026-06-01
 
 - Add named Opus error codes, `codeName` metadata, and `isOpusError()` for structured libopus error handling.
