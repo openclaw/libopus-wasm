@@ -1,7 +1,9 @@
+packages:
+  - "."
+
 allowBuilds:
   '@discordjs/opus': true
   esbuild: true
 
-onlyBuiltDependencies:
-  - '@discordjs/opus'
-  - esbuild
+overrides:
+  semver: 7.8.1
