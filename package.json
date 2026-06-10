@@ -48,9 +48,9 @@
   "devDependencies": {
     "@discordjs/opus": "0.10.0",
     "@types/node": "24.10.2",
-    "@vitest/coverage-v8": "4.0.14",
+    "@vitest/coverage-v8": "4.1.8",
     "typescript": "5.9.3",
-    "vitest": "4.0.14"
+    "vitest": "4.1.8"
   },
   "engines": {
     "node": ">=22"
