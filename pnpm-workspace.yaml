@@ -6,4 +6,5 @@ allowBuilds:
   esbuild: true
 
 overrides:
+  '@discordjs/node-pre-gyp@0.4.5>tar': 7.5.16
   semver: 7.8.1

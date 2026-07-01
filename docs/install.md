@@ -16,7 +16,7 @@ yarn add libopus-wasm
 
 ## Requirements
 
-- **Node:** 20 or newer. The package is ESM-only (`"type": "module"`).
+- **Node:** 22 or newer. The package is ESM-only (`"type": "module"`).
 - **Browsers:** any engine with WebAssembly and ES2022 — every current
   evergreen browser qualifies.
 - **No cross-origin isolation.** The module is single-threaded and needs neither
