@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Refresh pnpm, TypeScript, Node.js types, Vite, and GitHub Actions; pin patched transitive build tooling and extend CI coverage through Node.js 26.
 - Require Node.js 22 or newer for the npm package, matching the maintained CI matrix.
 
 ## 0.2.0 - 2026-06-01
