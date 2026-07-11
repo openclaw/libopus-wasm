@@ -5,7 +5,7 @@ allowBuilds:
   '@discordjs/opus': true
   esbuild: true
 
-minimumReleaseAge: 1440
+minimumReleaseAge: 2880
 minimumReleaseAgeExclude:
   - vite@8.1.2
   - '@typescript/typescript-aix-ppc64@7.0.2'
