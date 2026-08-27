@@ -3,6 +3,9 @@ name: Benchmark
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   native-comparison:
     name: WASM vs native
