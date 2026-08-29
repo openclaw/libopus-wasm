@@ -280,20 +280,28 @@ class WasmOpusEncoder implements OpusEncoderHandle {
     } finally {
       module._free(errorPtr);
     }
-    this.setBitrate(options.bitrate);
-    this.setComplexity(options.complexity);
-    this.setDtx(options.dtx);
-    this.setFec(options.fec);
-    if (options.maxBandwidth !== undefined) {
-      this.setMaxBandwidth(options.maxBandwidth);
-    }
-    this.setPacketLossPercent(options.packetLossPercent);
-    this.setSignal(options.signal);
-    if (options.vbr !== undefined) {
-      this.setVbr(options.vbr);
-    }
-    if (options.vbrConstraint !== undefined) {
-      this.setVbrConstraint(options.vbrConstraint);
+    let configured = false;
+    try {
+      this.setBitrate(options.bitrate);
+      this.setComplexity(options.complexity);
+      this.setDtx(options.dtx);
+      this.setFec(options.fec);
+      if (options.maxBandwidth !== undefined) {
+        this.setMaxBandwidth(options.maxBandwidth);
+      }
+      this.setPacketLossPercent(options.packetLossPercent);
+      this.setSignal(options.signal);
+      if (options.vbr !== undefined) {
+        this.setVbr(options.vbr);
+      }
+      if (options.vbrConstraint !== undefined) {
+        this.setVbrConstraint(options.vbrConstraint);
+      }
+      configured = true;
+    } finally {
+      if (!configured) {
+        this.free();
+      }
     }
   }
 
@@ -779,18 +787,26 @@ function normalizeEncoderOptions(options: EncoderOptions): NormalizedEncoderOpti
   if (options.maxBandwidth !== undefined) {
     validateBandwidth(options.maxBandwidth, "maxBandwidth");
   }
+  const complexity = options.complexity ?? 10;
+  validateIntegerRange(complexity, 0, 10, "complexity");
+  const packetLossPercent = options.packetLossPercent ?? 0;
+  validateIntegerRange(packetLossPercent, 0, 100, "packetLossPercent");
+  const signal = options.signal ?? Signal.Auto;
+  if (!Object.values(Signal).includes(signal)) {
+    throw new RangeError("signal must be Signal.Auto, Signal.Voice, or Signal.Music");
+  }
   return {
     application: options.application ?? Application.Audio,
     bitrate: normalizeBitrate(options.bitrate ?? 64_000),
     channels,
-    complexity: options.complexity ?? 10,
+    complexity,
     dtx: options.dtx ?? false,
     fec: options.fec ?? false,
     frameSize,
     maxBandwidth: options.maxBandwidth,
-    packetLossPercent: options.packetLossPercent ?? 0,
+    packetLossPercent,
     sampleRate,
-    signal: options.signal ?? Signal.Auto,
+    signal,
     vbr: options.vbr,
     vbrConstraint: options.vbrConstraint,
   };
