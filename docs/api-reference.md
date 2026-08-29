@@ -140,7 +140,7 @@ Passed per `encode` / `encodeFloat` call.
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
 | `frameSize` | `number` | encoder default | Samples/channel for this frame. |
-| `maxPacketBytes` | `number` | `4000` | Output buffer ceiling. |
+| `maxPacketBytes` | `number` | `4000` | Output buffer ceiling. Must be an integer from 1 to 2147483647. |
 
 ### DecodeOptions
 

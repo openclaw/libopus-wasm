@@ -149,6 +149,7 @@ const DEFAULT_CHANNELS = 2 satisfies ChannelCount;
 const DEFAULT_FRAME_DURATION_MS = 20;
 const MAX_PACKET_DURATION_MS = 120;
 const DEFAULT_MAX_PACKET_BYTES = 4000;
+const MAX_I32 = 0x7fff_ffff;
 const DEFAULT_SAMPLE_RATE = 48_000 satisfies SampleRate;
 const DECODER_INTEGER_CTL_REQUESTS = new Set<number>(Object.values(DecoderCtl));
 const ENCODER_INTEGER_CTL_REQUESTS = new Set<number>(Object.values(EncoderCtl));
@@ -309,7 +310,7 @@ class WasmOpusEncoder implements OpusEncoderHandle {
       );
     }
     const maxPacketBytes = options.maxPacketBytes ?? DEFAULT_MAX_PACKET_BYTES;
-    validatePositiveInteger(maxPacketBytes, "maxPacketBytes");
+    validateIntegerRange(maxPacketBytes, 1, MAX_I32, "maxPacketBytes");
     const pcmPtr = this.#ensurePcmBytes(pcmBytes.byteLength);
     const packetPtr = this.#ensurePacketBytes(maxPacketBytes);
     this.#module.HEAPU8.set(pcmBytes, pcmPtr);
@@ -337,7 +338,7 @@ class WasmOpusEncoder implements OpusEncoderHandle {
       );
     }
     const maxPacketBytes = options.maxPacketBytes ?? DEFAULT_MAX_PACKET_BYTES;
-    validatePositiveInteger(maxPacketBytes, "maxPacketBytes");
+    validateIntegerRange(maxPacketBytes, 1, MAX_I32, "maxPacketBytes");
     const pcmPtr = this.#ensurePcmBytes(pcm.byteLength);
     const packetPtr = this.#ensurePacketBytes(maxPacketBytes);
     this.#module.HEAPF32.set(pcm, pcmPtr >> 2);
@@ -897,6 +898,7 @@ function validateIntegerRange(value: number, min: number, max: number, name: str
 }
 
 function checkedMalloc(module: LibopusModule, bytes: number): number {
+  validateIntegerRange(bytes, 1, MAX_I32, "malloc size");
   const ptr = module._malloc(bytes);
   if (ptr === 0) {
     throw new Error(`WASM malloc failed for ${bytes} bytes`);
