@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- Destroy the native encoder if post-create option setters throw, and reject invalid `complexity`, `packetLossPercent`, and `signal` before WASM create.
+- Reject `maxPacketBytes` values that do not fit in a signed 32-bit integer so WASM malloc cannot wrap and poison the packet scratch buffer. (#11) Thanks @SebTardif.
+- Destroy the native encoder if post-create option setters throw, and reject invalid `complexity`, `packetLossPercent`, and `signal` before WASM create. (#10) Thanks @SebTardif.
 - Update pnpm, Node.js types, Vite, Vitest and coverage tooling, refresh transitive dependency pins, and build CI with Emscripten 6.0.8 and setup-node v7.
 - Refresh pnpm, TypeScript, Node.js types, Vite, and GitHub Actions; pin patched transitive build tooling and extend CI coverage through Node.js 26.
 - Require Node.js 22 or newer for the npm package, matching the maintained CI matrix.
