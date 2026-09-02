@@ -208,8 +208,8 @@ Integer request codes for the CTL passthrough. See the
 Use `OpusErrorCode` for named libopus error codes and `isOpusError(error)` for
 realm-safe checks.
 
-Argument validation (wrong frame size, out-of-range option, empty packet,
-non-allow-listed CTL) throws a plain `RangeError` _before_ reaching WASM. Using a
+Argument validation (wrong frame size, out-of-range option, empty or oversized
+packet, non-allow-listed CTL) throws a plain `RangeError` _before_ reaching WASM. Using a
 handle after `free()` throws a plain `Error`. See [Errors & validation](errors.md)
 for the full breakdown.
 
@@ -221,6 +221,7 @@ for the full breakdown.
 | Channels | `1` (mono), `2` (stereo) |
 | Encode frame duration | `2.5`, `5`, `10`, `20`, `40`, `60` ms |
 | Decode output capacity | up to `120` ms |
+| Decode / `getPacketInfo` packet | at most `65536` bytes |
 | PLC / FEC frame size | multiples of `2.5` ms, from `2.5` to `120` ms |
 
 ## Types

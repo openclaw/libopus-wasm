@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Reject decode and `getPacketInfo` packets larger than 64 KiB before WASM malloc so an oversized buffer cannot force a large heap allocation. Thanks @SebTardif.
 - Reject `maxPacketBytes` values that do not fit in a signed 32-bit integer so WASM malloc cannot wrap and poison the packet scratch buffer. (#11) Thanks @SebTardif.
 - Destroy the native encoder if post-create option setters throw, and reject invalid `complexity`, `packetLossPercent`, and `signal` before WASM create. (#10) Thanks @SebTardif.
 - Update pnpm, Node.js types, Vite, Vitest and coverage tooling, refresh transitive dependency pins, and build CI with Emscripten 6.0.8 and setup-node v7.

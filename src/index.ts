@@ -149,6 +149,7 @@ const DEFAULT_CHANNELS = 2 satisfies ChannelCount;
 const DEFAULT_FRAME_DURATION_MS = 20;
 const MAX_PACKET_DURATION_MS = 120;
 const DEFAULT_MAX_PACKET_BYTES = 4000;
+const MAX_DECODE_PACKET_BYTES = 64 * 1024;
 const MAX_I32 = 0x7fff_ffff;
 const DEFAULT_SAMPLE_RATE = 48_000 satisfies SampleRate;
 const DECODER_INTEGER_CTL_REQUESTS = new Set<number>(Object.values(DecoderCtl));
@@ -207,6 +208,7 @@ export async function getPacketInfo(
   if (packet.byteLength === 0) {
     throw new RangeError("packet must not be empty");
   }
+  validateDecodePacketBytes(packet.byteLength);
   const module = await getModule();
   const packetPtr = checkedMalloc(module, packet.byteLength);
   try {
@@ -649,12 +651,14 @@ class WasmOpusDecoder implements OpusDecoderHandle {
     if (packet.byteLength === 0) {
       throw new RangeError("packet must not be empty; use null or decodePacketLoss() for PLC");
     }
+    validateDecodePacketBytes(packet.byteLength);
     const packetPtr = this.#ensurePacketBytes(packet.byteLength);
     this.#module.HEAPU8.set(packet, packetPtr);
     return { packetLength: packet.byteLength, packetPtr };
   }
 
   #ensurePacketBytes(requiredBytes: number): number {
+    validateDecodePacketBytes(requiredBytes);
     if (this.#packetPtr !== 0 && this.#packetBytes >= requiredBytes) {
       return this.#packetPtr;
     }
@@ -910,6 +914,14 @@ function validatePositiveInteger(value: number, name: string): void {
 function validateIntegerRange(value: number, min: number, max: number, name: string): void {
   if (!Number.isInteger(value) || value < min || value > max) {
     throw new RangeError(`${name} must be an integer from ${min} to ${max}`);
+  }
+}
+
+function validateDecodePacketBytes(byteLength: number): void {
+  if (byteLength > MAX_DECODE_PACKET_BYTES) {
+    throw new RangeError(
+      `packet must be at most ${MAX_DECODE_PACKET_BYTES} bytes; got ${byteLength}`,
+    );
   }
 }
 

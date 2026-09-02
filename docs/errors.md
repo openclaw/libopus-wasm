@@ -9,8 +9,8 @@ or truncated packet.
 ## RangeError: bad arguments
 
 Every option and buffer is checked up front. A wrong frame size, an
-out-of-range option, an empty packet, or a CTL request outside the allow-list
-throws synchronously with a `RangeError`:
+out-of-range option, an empty or oversized packet (larger than 64 KiB), or a
+CTL request outside the allow-list throws synchronously with a `RangeError`:
 
 ```ts
 encoder.encode(new Int16Array(123)); // RangeError: wrong sample count

@@ -65,8 +65,8 @@ const frame = decoder.decode(packet);
 ## Invalid packets
 
 A corrupt or truncated packet surfaces the libopus error as an
-[`OpusError`](errors.md); an empty `Uint8Array` throws a `RangeError` before
-reaching WASM.
+[`OpusError`](errors.md). An empty `Uint8Array`, or a packet larger than
+64 KiB, throws a `RangeError` before reaching WASM.
 
 ```ts
 import { OpusError } from "libopus-wasm";

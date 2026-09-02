@@ -90,8 +90,9 @@ try {
 ```
 
 Passing an **empty** `Uint8Array` is a different mistake and throws a
-`RangeError` — use `null` (or `decodePacketLoss`) to signal a lost packet, not a
-zero-length buffer.
+`RangeError`. Use `null` (or `decodePacketLoss`) to signal a lost packet, not a
+zero-length buffer. Packets larger than 64 KiB also throw a `RangeError` before
+any WASM allocation.
 
 ## Next
 
