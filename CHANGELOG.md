@@ -2,12 +2,14 @@
 
 ## Unreleased
 
+## 0.3.0 - 2026-09-04
+
+- Raise the minimum supported Node.js version from 20 to 22.
 - Update pnpm to 11.25.0 and Node.js types to 26.4.1, and build CI with Emscripten 6.0.9.
 - Reject `maxPacketBytes` values that do not fit in a signed 32-bit integer so WASM malloc cannot wrap and poison the packet scratch buffer. (#11) Thanks @SebTardif.
 - Destroy the native encoder if post-create option setters throw, and reject invalid `complexity`, `packetLossPercent`, and `signal` before WASM create. (#10) Thanks @SebTardif.
 - Update pnpm, Node.js types, Vite, Vitest and coverage tooling, refresh transitive dependency pins, and build CI with Emscripten 6.0.8 and setup-node v7.
 - Refresh pnpm, TypeScript, Node.js types, Vite, and GitHub Actions; pin patched transitive build tooling and extend CI coverage through Node.js 26.
-- Require Node.js 22 or newer for the npm package, matching the maintained CI matrix.
 
 ## 0.2.0 - 2026-06-01
 
