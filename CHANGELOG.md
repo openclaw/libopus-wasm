@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Update pnpm to 11.25.0 and Node.js types to 26.4.1, and build CI with Emscripten 6.0.9.
 - Reject `maxPacketBytes` values that do not fit in a signed 32-bit integer so WASM malloc cannot wrap and poison the packet scratch buffer. (#11) Thanks @SebTardif.
 - Destroy the native encoder if post-create option setters throw, and reject invalid `complexity`, `packetLossPercent`, and `signal` before WASM create. (#10) Thanks @SebTardif.
 - Update pnpm, Node.js types, Vite, Vitest and coverage tooling, refresh transitive dependency pins, and build CI with Emscripten 6.0.8 and setup-node v7.

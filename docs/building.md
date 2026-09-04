@@ -6,7 +6,7 @@ toolchain, pin a different libopus, or hack on the bindings.
 
 ## Prerequisites
 
-- [Emscripten](https://emscripten.org/) (`emcc`) on your `PATH`; CI uses version 6.0.8.
+- [Emscripten](https://emscripten.org/) (`emcc`) on your `PATH`; CI uses version 6.0.9.
 - [pnpm](https://pnpm.io/) — the repo's package manager.
 - Node 22 or newer.
 

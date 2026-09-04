@@ -22,7 +22,7 @@ jobs:
 
       - uses: emscripten-core/setup-emsdk@v16
         with:
-          version: 6.0.8
+          version: 6.0.9
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm benchmark
