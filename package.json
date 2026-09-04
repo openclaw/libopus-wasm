@@ -1,7 +1,7 @@
 {
   "name": "libopus-wasm",
   "version": "0.2.0",
-  "packageManager": "pnpm@11.24.0",
+  "packageManager": "pnpm@11.25.0",
   "description": "Small, modern WASM bindings for libopus raw packet encode/decode.",
   "type": "module",
   "sideEffects": false,
@@ -48,7 +48,7 @@
   },
   "devDependencies": {
     "@discordjs/opus": "0.10.0",
-    "@types/node": "26.4.0",
+    "@types/node": "26.4.1",
     "@vitest/coverage-v8": "4.1.11",
     "typescript": "^7.0.2",
     "vite": "8.2.2",
