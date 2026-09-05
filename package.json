@@ -1,6 +1,6 @@
 {
   "name": "libopus-wasm",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "packageManager": "pnpm@11.25.0",
   "description": "Small, modern WASM bindings for libopus raw packet encode/decode.",
   "type": "module",

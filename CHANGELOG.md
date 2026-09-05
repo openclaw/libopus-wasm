@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 - 2026-09-05
 
-**Highlights:** Safer encoder initialization and packet-size handling, plus reliable documentation navigation. The next release requires Node.js 22 or newer.
+**Highlights:** Safer encoder initialization and packet-size handling, plus reliable documentation navigation. This release requires Node.js 22 or newer.
 
 - Reject `maxPacketBytes` values outside signed 32-bit bounds so WASM allocation cannot wrap and poison the packet scratch buffer. (#11) Thanks @SebTardif.
 - Free native encoders when post-create option setters fail, and validate `complexity`, `packetLossPercent`, and `signal` before native encoder creation. (#10) Thanks @SebTardif.
