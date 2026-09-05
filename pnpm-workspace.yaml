@@ -1,6 +1,8 @@
 packages:
   - "."
 
+trustPolicy: no-downgrade
+
 allowBuilds:
   '@discordjs/opus': true
   esbuild: true
