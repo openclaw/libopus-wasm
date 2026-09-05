@@ -2,13 +2,12 @@ packages:
   - "."
 
 trustPolicy: no-downgrade
-blockExoticSubdeps: true
 
 allowBuilds:
   '@discordjs/opus': true
   esbuild: true
 
-minimumReleaseAge: 10080
+minimumReleaseAge: 2880
 minimumReleaseAgeExclude:
   - vite@8.1.2
   - '@typescript/typescript-aix-ppc64@7.0.2'

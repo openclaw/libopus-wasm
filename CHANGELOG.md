@@ -9,6 +9,7 @@
 - Generate documentation table-of-contents links from rendered headings so code-formatted, repeated, and punctuated headings link correctly. (#7) Thanks @vincentkoc.
 - Raise the minimum supported Node.js version from 20 to 22.
 - Refresh pnpm to 11.25.0, TypeScript to 7.0.2, Node.js types to 26.4.1, Vite to 8.2.2, and Vitest and V8 coverage to 5.0.0; refresh transitive dependencies and GitHub Actions, build with Emscripten 6.0.9, and test through Node.js 26. Running the test suite requires Node.js 22.12 or newer.
+- Reject dependency releases with downgraded publisher trust evidence while preserving the 48-hour release-age policy. (#8) Thanks @anupamme.
 
 ## 0.2.0 - 2026-06-01
 
