@@ -8,7 +8,7 @@ toolchain, pin a different libopus, or hack on the bindings.
 
 - [Emscripten](https://emscripten.org/) (`emcc`) on your `PATH`; CI uses version 6.0.9.
 - [pnpm](https://pnpm.io/) — the repo's package manager.
-- Node 22 or newer.
+- Node.js 22.12 or newer for the test toolchain. The published library still supports Node.js 22 or newer.
 
 Verify the toolchain:
 
