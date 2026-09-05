@@ -1,5 +1,7 @@
 # Changelog
 
+## Unreleased
+
 ## 0.3.0 - 2026-09-05
 
 **Highlights:** Safer encoder initialization and packet-size handling, plus reliable documentation navigation. This release requires Node.js 22 or newer.
