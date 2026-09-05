@@ -2,13 +2,13 @@
 
 ## Unreleased
 
-- Update Vitest and V8 coverage tooling to 5.0.0; running the test suite now requires Node.js 22.12 or newer.
-- Update pnpm to 11.25.0 and Node.js types to 26.4.1, and build CI with Emscripten 6.0.9.
-- Reject `maxPacketBytes` values that do not fit in a signed 32-bit integer so WASM malloc cannot wrap and poison the packet scratch buffer. (#11) Thanks @SebTardif.
-- Destroy the native encoder if post-create option setters throw, and reject invalid `complexity`, `packetLossPercent`, and `signal` before WASM create. (#10) Thanks @SebTardif.
-- Update pnpm, Node.js types, Vite, Vitest and coverage tooling, refresh transitive dependency pins, and build CI with Emscripten 6.0.8 and setup-node v7.
-- Refresh pnpm, TypeScript, Node.js types, Vite, and GitHub Actions; pin patched transitive build tooling and extend CI coverage through Node.js 26.
-- Require Node.js 22 or newer for the npm package, matching the maintained CI matrix.
+**Highlights:** Safer encoder initialization and packet-size handling, plus reliable documentation navigation. The next release requires Node.js 22 or newer.
+
+- Reject `maxPacketBytes` values outside signed 32-bit bounds so WASM allocation cannot wrap and poison the packet scratch buffer. (#11) Thanks @SebTardif.
+- Free native encoders when post-create option setters fail, and validate `complexity`, `packetLossPercent`, and `signal` before native encoder creation. (#10) Thanks @SebTardif.
+- Generate documentation table-of-contents links from rendered headings so code-formatted, repeated, and punctuated headings link correctly. (#7) Thanks @vincentkoc.
+- Raise the minimum supported Node.js version from 20 to 22.
+- Refresh pnpm to 11.25.0, TypeScript to 7.0.2, Node.js types to 26.4.1, Vite to 8.2.2, and Vitest and V8 coverage to 5.0.0; refresh transitive dependencies and GitHub Actions, build with Emscripten 6.0.9, and test through Node.js 26. Running the test suite requires Node.js 22.12 or newer.
 
 ## 0.2.0 - 2026-06-01
 
