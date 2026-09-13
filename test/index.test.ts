@@ -121,24 +121,39 @@ describe("libopus-wasm", () => {
     }
   });
 
-  it("encodes and decodes Float32 PCM", async () => {
-    const encoder = await createEncoder();
-    const decoder = await createDecoder();
-    try {
-      const packet = encoder.encodeFloat(makeSineFloatFrame(encoder.frameSize, encoder.channels));
-      const decoded = decoder.decodeFloat(packet);
-      const decodedBatch = decoder.decodeFloatFrames([packet]);
+  it.each([120, 240, 480, 960, 1920, 2880])(
+    "roundtrips %i-sample stereo frames without corrupting codec state",
+    async (frameSize) => {
+      const encoder = await createEncoder({ frameSize });
+      const decoder = await createDecoder();
+      try {
+        const packet = encoder.encode(makeSineFrame(frameSize, 2));
+        const nextEncoder = await createEncoder();
+        const nextDecoder = await createDecoder();
+        try {
+          expect(nextDecoder.decode(nextEncoder.encode(makeSineFrame(960, 2)))).toHaveLength(1920);
+        } finally {
+          nextEncoder.free();
+          nextDecoder.free();
+        }
 
-      expect(packet.byteLength).toBeGreaterThan(0);
-      expect(decoded).toBeInstanceOf(Float32Array);
-      expect(decoded.length).toBe(encoder.frameSize * encoder.channels);
-      expect(decodedBatch).toHaveLength(1);
-      expect(decodedBatch[0]?.length).toBe(encoder.frameSize * encoder.channels);
-    } finally {
-      encoder.free();
-      decoder.free();
-    }
-  });
+        const floatPacket = encoder.encodeFloat(makeSineFloatFrame(frameSize, 2));
+
+        expect(decoder.decode(packet)).toHaveLength(frameSize * 2);
+        const decodedFloat = decoder.decodeFloat(floatPacket);
+        expect(decodedFloat).toBeInstanceOf(Float32Array);
+        expect(decodedFloat).toHaveLength(frameSize * 2);
+        expect(decoder.decodeFloatFrames([floatPacket])[0]).toHaveLength(frameSize * 2);
+        expect(await getPacketInfo(packet)).toMatchObject({ samples: frameSize });
+
+        const following = encoder.encode(makeSineFrame(960, 2), { frameSize: 960 });
+        expect(decoder.decode(following)).toHaveLength(1920);
+      } finally {
+        encoder.free();
+        decoder.free();
+      }
+    },
+  );
 
   it("reports raw packet metadata without decoding", async () => {
     const encoder = await createEncoder({ frameSize: 960, sampleRate: 48_000 });
@@ -364,7 +379,7 @@ describe("libopus-wasm", () => {
 function makeSineFrame(frameSize: number, channels: 1 | 2): Int16Array {
   const pcm = new Int16Array(frameSize * channels);
   for (let sample = 0; sample < frameSize; sample += 1) {
-    const value = Math.round(Math.sin((sample / frameSize) * Math.PI * 2) * 8000);
+    const value = Math.round(Math.sin((sample / 48_000) * Math.PI * 2 * 200) * 8000);
     for (let channel = 0; channel < channels; channel += 1) {
       pcm[sample * channels + channel] = value;
     }
@@ -373,12 +388,5 @@ function makeSineFrame(frameSize: number, channels: 1 | 2): Int16Array {
 }
 
 function makeSineFloatFrame(frameSize: number, channels: 1 | 2): Float32Array {
-  const pcm = new Float32Array(frameSize * channels);
-  for (let sample = 0; sample < frameSize; sample += 1) {
-    const value = Math.sin((sample / frameSize) * Math.PI * 2) * 0.25;
-    for (let channel = 0; channel < channels; channel += 1) {
-      pcm[sample * channels + channel] = value;
-    }
-  }
-  return pcm;
+  return Float32Array.from(makeSineFrame(frameSize, channels), (sample) => sample / 32768);
 }

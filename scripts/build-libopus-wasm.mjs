@@ -87,6 +87,9 @@ await run(
     outputPath,
     "-s",
     "ALLOW_MEMORY_GROWTH=1",
+    // Long stereo frames exceed Emscripten's default 64 KiB stack.
+    "-s",
+    "STACK_SIZE=1048576",
     "-s",
     "ASSERTIONS=0",
     "-s",

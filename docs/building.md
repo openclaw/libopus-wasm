@@ -67,6 +67,10 @@ and no second network request. The C entry points are thin wrappers in
 `native/opus_wasm_wrapper.c` (prefixed `oc_`) that the TypeScript in
 `src/index.ts` calls into.
 
+The module reserves a 1 MiB C stack so long stereo frames fit safely. Unlike
+the WebAssembly heap, this stack cannot grow; Emscripten's default 64 KiB is
+not enough for every supported Opus frame duration.
+
 ## Next
 
 - [Benchmark](benchmark.md) — measure the build against the native addon.
