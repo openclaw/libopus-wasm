@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-- Reserve enough WebAssembly stack for 40 ms and 60 ms stereo frames so encoding cannot corrupt later codec operations.
+## 0.4.0 - 2026-09-13
+
+- Reserve enough WebAssembly stack for 40 ms and 60 ms stereo frames so encoding cannot corrupt later codec operations. (#18)
 
 ## 0.3.0 - 2026-09-05
 
