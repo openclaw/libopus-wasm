@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Reserve enough WebAssembly stack for 40 ms and 60 ms stereo frames so encoding cannot corrupt later codec operations.
+
 ## 0.3.0 - 2026-09-05
 
 **Highlights:** Safer encoder initialization and packet-size handling, plus reliable documentation navigation. This release requires Node.js 22 or newer.
