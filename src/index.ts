@@ -149,6 +149,7 @@ const DEFAULT_CHANNELS = 2 satisfies ChannelCount;
 const DEFAULT_FRAME_DURATION_MS = 20;
 const MAX_PACKET_DURATION_MS = 120;
 const DEFAULT_MAX_PACKET_BYTES = 4000;
+const MIN_I32 = -0x8000_0000;
 const MAX_I32 = 0x7fff_ffff;
 const DEFAULT_SAMPLE_RATE = 48_000 satisfies SampleRate;
 const DECODER_INTEGER_CTL_REQUESTS = new Set<number>(Object.values(DecoderCtl));
@@ -374,7 +375,7 @@ class WasmOpusEncoder implements OpusEncoderHandle {
   encoderCtl(request: number, value: number): void {
     this.#assertLive();
     validateInteger(request, "request");
-    validateInteger(value, "value");
+    validateIntegerRange(value, MIN_I32, MAX_I32, "value");
     if (!ENCODER_INTEGER_CTL_REQUESTS.has(request)) {
       throw new RangeError("encoderCtl only supports integer setter requests");
     }
@@ -610,7 +611,7 @@ class WasmOpusDecoder implements OpusDecoderHandle {
   decoderCtl(request: number, value: number): void {
     this.#assertLive();
     validateInteger(request, "request");
-    validateInteger(value, "value");
+    validateIntegerRange(value, MIN_I32, MAX_I32, "value");
     if (!DECODER_INTEGER_CTL_REQUESTS.has(request)) {
       throw new RangeError("decoderCtl only supports integer setter requests");
     }
@@ -783,6 +784,10 @@ function normalizeEncoderOptions(options: EncoderOptions): NormalizedEncoderOpti
   const sampleRate = options.sampleRate ?? DEFAULT_SAMPLE_RATE;
   const channels = options.channels ?? DEFAULT_CHANNELS;
   validateCodecOptions({ channels, sampleRate });
+  const application = options.application ?? Application.Audio;
+  if (!Object.values(Application).includes(application)) {
+    throw new RangeError("application must be Application.Voip, Application.Audio, or Application.RestrictedLowDelay");
+  }
   const frameSize = options.frameSize ?? samplesForDuration(sampleRate, DEFAULT_FRAME_DURATION_MS);
   validateEncodeFrameSize(frameSize, sampleRate, "frameSize");
   if (options.maxBandwidth !== undefined) {
@@ -797,7 +802,7 @@ function normalizeEncoderOptions(options: EncoderOptions): NormalizedEncoderOpti
     throw new RangeError("signal must be Signal.Auto, Signal.Voice, or Signal.Music");
   }
   return {
-    application: options.application ?? Application.Audio,
+    application,
     bitrate: normalizeBitrate(options.bitrate ?? 64_000),
     channels,
     complexity,
@@ -845,7 +850,7 @@ function normalizeBitrate(bitrate: Bitrate): number {
   if (bitrate === Bitrate.Auto || bitrate === Bitrate.Max) {
     return bitrate;
   }
-  validatePositiveInteger(bitrate, "bitrate");
+  validateIntegerRange(bitrate, 1, MAX_I32, "bitrate");
   return bitrate;
 }
 
@@ -898,12 +903,6 @@ function validateFrameSizeForDurations(
 function validateInteger(value: number, name: string): void {
   if (!Number.isInteger(value)) {
     throw new RangeError(`${name} must be an integer`);
-  }
-}
-
-function validatePositiveInteger(value: number, name: string): void {
-  if (!Number.isInteger(value) || value <= 0) {
-    throw new RangeError(`${name} must be a positive integer`);
   }
 }
 
