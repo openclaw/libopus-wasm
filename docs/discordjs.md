@@ -42,6 +42,10 @@ returning garbage. If initialization itself fails (for example, an unsupported
 sample rate), `ready` rejects and the synchronous methods throw an error whose
 `cause` is the original failure.
 
+If only one of the two underlying codecs initializes successfully, it is freed
+before `ready` rejects. Calling `free()` while initialization is pending also
+releases any codecs that finish initializing later.
+
 ## API
 
 `OpusEncoder` mirrors the `@discordjs/opus` surface:

@@ -266,7 +266,7 @@ class WasmOpusEncoder implements OpusEncoderHandle {
     this.channels = options.channels;
     this.frameSize = options.frameSize;
     this.sampleRate = options.sampleRate;
-    const errorPtr = module._malloc(4);
+    const errorPtr = checkedMalloc(module, 4);
     try {
       const ptr = module._oc_create_encoder(
         options.sampleRate,
@@ -533,7 +533,7 @@ class WasmOpusDecoder implements OpusDecoderHandle {
     this.channels = options.channels;
     this.maxFrameSize = options.maxFrameSize;
     this.sampleRate = options.sampleRate;
-    const errorPtr = module._malloc(4);
+    const errorPtr = checkedMalloc(module, 4);
     try {
       const ptr = module._oc_create_decoder(options.sampleRate, options.channels, errorPtr);
       const error = module.HEAP32[errorPtr >> 2] ?? 0;

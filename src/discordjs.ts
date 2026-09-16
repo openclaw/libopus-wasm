@@ -14,7 +14,7 @@ export class OpusEncoder {
   constructor(rate = 48_000, channels = 2) {
     this.rate = rate;
     this.channels = channels;
-    this.ready = Promise.all([
+    this.ready = Promise.allSettled([
       createEncoder({
         channels: channels as ChannelCount,
         sampleRate: rate as SampleRate,
@@ -23,7 +23,19 @@ export class OpusEncoder {
         channels: channels as ChannelCount,
         sampleRate: rate as SampleRate,
       }),
-    ]).then(([encoder, decoder]) => {
+    ]).then(([encoderResult, decoderResult]) => {
+      if (encoderResult.status === "rejected") {
+        if (decoderResult.status === "fulfilled") {
+          decoderResult.value.free();
+        }
+        throw encoderResult.reason;
+      }
+      const encoder = encoderResult.value;
+      if (decoderResult.status === "rejected") {
+        encoder.free();
+        throw decoderResult.reason;
+      }
+      const decoder = decoderResult.value;
       if (this.#freed) {
         encoder.free();
         decoder.free();
