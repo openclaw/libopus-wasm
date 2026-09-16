@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Reject CTL values and numeric bitrates outside signed 32-bit bounds and invalid application modes before WebAssembly can coerce them into different settings; correct the Q8 decoder gain examples.
+- Free partially initialized Discord adapters when either codec fails, and reject failed WASM error-buffer allocations before creating native codecs.
 
 ## 0.4.0 - 2026-09-13
 
