@@ -22,7 +22,7 @@ encoder.getBitrate(); // 32000
 import { createDecoder, DecoderCtl } from "libopus-wasm";
 
 const decoder = await createDecoder();
-decoder.decoderCtl(DecoderCtl.SetGain, 256); // +3 dB, Q8 fixed-point
+decoder.decoderCtl(DecoderCtl.SetGain, 768); // +3 dB, Q8 fixed-point
 ```
 
 ## A curated, safe subset
@@ -37,8 +37,10 @@ deliberate safety boundary, not a thin wrapper over the C varargs API:
 - **Allow-listed requests.** Only the codes in `EncoderCtl` / `DecoderCtl` are
   accepted. Any other request — including pointer-style ones — throws a
   `RangeError` at the JS boundary before touching WASM.
-- **Integers only.** Both `request` and `value` must be integers, or the call
-  throws a `RangeError`.
+- **Integers only.** Both `request` and `value` must be integers, and `value`
+  must fit in a signed 32-bit integer (`-2147483648` to `2147483647`), or the
+  call throws a `RangeError`. Values never wrap at the WASM boundary. libopus
+  still validates each request's narrower range and reports an `OpusError`.
 
 ```ts
 encoder.encoderCtl(4003, 0); // RangeError: not an allow-listed integer setter
@@ -81,11 +83,11 @@ encoder.encoderCtl(EncoderCtl.SetForceChannels, 2);
 
 | Member | libopus request | Notes |
 | --- | --- | --- |
-| `SetGain` | `OPUS_SET_GAIN` | Output gain in Q8 dB (256 = +3 dB). |
+| `SetGain` | `OPUS_SET_GAIN` | Output gain in Q8 dB (256 = +1 dB). |
 | `SetPhaseInversionDisabled` | `OPUS_SET_PHASE_INVERSION_DISABLED` | Disable stereo phase inversion. |
 
 ```ts
-decoder.decoderCtl(DecoderCtl.SetGain, -256); // attenuate by 3 dB
+decoder.decoderCtl(DecoderCtl.SetGain, -768); // attenuate by 3 dB
 ```
 
 ## Next

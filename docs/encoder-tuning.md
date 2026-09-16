@@ -34,6 +34,8 @@ const encoder = await createEncoder({
 ## Application mode
 
 Set this at construction — it cannot change after the encoder is created.
+Only the three `Application` values below are accepted; other numbers throw a
+`RangeError` before native encoder allocation.
 
 | Mode | Best for |
 | --- | --- |
@@ -43,7 +45,9 @@ Set this at construction — it cannot change after the encoder is created.
 
 ## Bitrate
 
-`bitrate` accepts an integer in bits per second, or one of two sentinels:
+`bitrate` accepts a positive signed 32-bit integer in bits per second (up to
+`2147483647`), or one of two sentinels. Larger numbers throw a `RangeError`
+instead of wrapping into another bitrate or sentinel:
 
 ```ts
 encoder.setBitrate(128000);     // 128 kbps
