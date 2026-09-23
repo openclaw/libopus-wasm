@@ -64,7 +64,6 @@ const exportedFunctions = [
   "_oc_get_version_string",
   "_oc_packet_get_bandwidth",
   "_oc_packet_get_nb_channels",
-  "_oc_packet_get_nb_frames",
   "_oc_packet_get_nb_samples",
   "_oc_packet_get_samples_per_frame",
   "_oc_packet_parse",

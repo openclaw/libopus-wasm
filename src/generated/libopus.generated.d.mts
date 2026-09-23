@@ -53,7 +53,6 @@ type LibopusModule = {
   _oc_get_version_string: () => number;
   _oc_packet_get_bandwidth: (packetPtr: number) => number;
   _oc_packet_get_nb_channels: (packetPtr: number) => number;
-  _oc_packet_get_nb_frames: (packetPtr: number, packetLength: number) => number;
   _oc_packet_get_nb_samples: (
     packetPtr: number,
     packetLength: number,

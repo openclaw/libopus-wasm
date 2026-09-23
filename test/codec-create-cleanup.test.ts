@@ -121,4 +121,38 @@ describe("codec initialization cleanup", () => {
     expect(lifecycle.encoders.size).toBe(0);
     expect(lifecycle.decoders.size).toBe(0);
   });
+
+  it.each(["pcm", "packet"] as const)("keeps encoder scratch usable after failed %s growth", async (buffer) => {
+    const encoder = await createEncoder();
+    const decoder = await createDecoder();
+    try {
+      const pcm = new Int16Array(encoder.frameSize * encoder.channels);
+      encoder.encode(pcm);
+      lifecycle.failNext = "malloc";
+      expect(() => buffer === "pcm"
+        ? encoder.encodeFloat(new Float32Array(pcm.length))
+        : encoder.encode(pcm, { maxPacketBytes: 8000 })).toThrow(/WASM malloc failed/);
+      expect(decoder.decode(encoder.encode(pcm))).toHaveLength(pcm.length);
+      expect(decoder.decode(encoder.encodeFloat(new Float32Array(pcm.length)))).toHaveLength(pcm.length);
+    } finally {
+      encoder.free();
+      decoder.free();
+    }
+  });
+
+  it("keeps decoder scratch usable after failed PCM growth", async () => {
+    const encoder = await createEncoder();
+    const decoder = await createDecoder();
+    try {
+      const packet = encoder.encode(new Int16Array(encoder.frameSize * encoder.channels));
+      decoder.decode(packet);
+      lifecycle.failNext = "malloc";
+      expect(() => decoder.decodeFloat(packet)).toThrow(/WASM malloc failed/);
+      expect(decoder.decode(packet)).toHaveLength(encoder.frameSize * encoder.channels);
+      expect(decoder.decodeFloat(packet)).toHaveLength(encoder.frameSize * encoder.channels);
+    } finally {
+      encoder.free();
+      decoder.free();
+    }
+  });
 });
