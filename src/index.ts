@@ -247,6 +247,32 @@ export async function getPacketInfo(
   }
 }
 
+class WasmBuffer {
+  #bytes = 0;
+  #ptr = 0;
+
+  constructor(private readonly module: LibopusModule) {}
+
+  ensure(requiredBytes: number): number {
+    if (this.#ptr !== 0 && this.#bytes >= requiredBytes) {
+      return this.#ptr;
+    }
+    const nextPtr = checkedMalloc(this.module, requiredBytes);
+    this.free();
+    this.#ptr = nextPtr;
+    this.#bytes = requiredBytes;
+    return this.#ptr;
+  }
+
+  free(): void {
+    if (this.#ptr !== 0) {
+      this.module._free(this.#ptr);
+    }
+    this.#ptr = 0;
+    this.#bytes = 0;
+  }
+}
+
 class WasmOpusEncoder implements OpusEncoderHandle {
   readonly application: Application;
   readonly channels: ChannelCount;
@@ -254,14 +280,14 @@ class WasmOpusEncoder implements OpusEncoderHandle {
   readonly sampleRate: SampleRate;
   #freed = false;
   #module: LibopusModule;
-  #packetBytes = 0;
-  #packetPtr = 0;
-  #pcmBytes = 0;
-  #pcmPtr = 0;
+  #packet: WasmBuffer;
+  #pcm: WasmBuffer;
   #ptr: number;
 
   constructor(module: LibopusModule, options: NormalizedEncoderOptions) {
     this.#module = module;
+    this.#packet = new WasmBuffer(module);
+    this.#pcm = new WasmBuffer(module);
     this.application = options.application;
     this.channels = options.channels;
     this.frameSize = options.frameSize;
@@ -320,8 +346,8 @@ class WasmOpusEncoder implements OpusEncoderHandle {
     }
     const maxPacketBytes = options.maxPacketBytes ?? DEFAULT_MAX_PACKET_BYTES;
     validateIntegerRange(maxPacketBytes, 1, MAX_I32, "maxPacketBytes");
-    const pcmPtr = this.#ensurePcmBytes(pcmBytes.byteLength);
-    const packetPtr = this.#ensurePacketBytes(maxPacketBytes);
+    const pcmPtr = this.#pcm.ensure(pcmBytes.byteLength);
+    const packetPtr = this.#packet.ensure(maxPacketBytes);
     this.#module.HEAPU8.set(pcmBytes, pcmPtr);
     const encodedBytes = this.#module._oc_encode(
       this.#ptr,
@@ -348,8 +374,8 @@ class WasmOpusEncoder implements OpusEncoderHandle {
     }
     const maxPacketBytes = options.maxPacketBytes ?? DEFAULT_MAX_PACKET_BYTES;
     validateIntegerRange(maxPacketBytes, 1, MAX_I32, "maxPacketBytes");
-    const pcmPtr = this.#ensurePcmBytes(pcm.byteLength);
-    const packetPtr = this.#ensurePacketBytes(maxPacketBytes);
+    const pcmPtr = this.#pcm.ensure(pcm.byteLength);
+    const packetPtr = this.#packet.ensure(maxPacketBytes);
     this.#module.HEAPF32.set(pcm, pcmPtr >> 2);
     const encodedBytes = this.#module._oc_encode_float(
       this.#ptr,
@@ -455,7 +481,8 @@ class WasmOpusEncoder implements OpusEncoderHandle {
     if (this.#freed) {
       return;
     }
-    this.#freeScratch();
+    this.#packet.free();
+    this.#pcm.free();
     this.#module._oc_destroy_encoder(this.#ptr);
     this.#freed = true;
   }
@@ -475,45 +502,6 @@ class WasmOpusEncoder implements OpusEncoderHandle {
       throw createOpusError(this.#module, code, operation);
     }
   }
-
-  #ensurePacketBytes(requiredBytes: number): number {
-    if (this.#packetPtr !== 0 && this.#packetBytes >= requiredBytes) {
-      return this.#packetPtr;
-    }
-    const nextPtr = checkedMalloc(this.#module, requiredBytes);
-    if (this.#packetPtr !== 0) {
-      this.#module._free(this.#packetPtr);
-    }
-    this.#packetPtr = nextPtr;
-    this.#packetBytes = requiredBytes;
-    return this.#packetPtr;
-  }
-
-  #ensurePcmBytes(requiredBytes: number): number {
-    if (this.#pcmPtr !== 0 && this.#pcmBytes >= requiredBytes) {
-      return this.#pcmPtr;
-    }
-    const nextPtr = checkedMalloc(this.#module, requiredBytes);
-    if (this.#pcmPtr !== 0) {
-      this.#module._free(this.#pcmPtr);
-    }
-    this.#pcmPtr = nextPtr;
-    this.#pcmBytes = requiredBytes;
-    return this.#pcmPtr;
-  }
-
-  #freeScratch(): void {
-    if (this.#packetPtr !== 0) {
-      this.#module._free(this.#packetPtr);
-    }
-    if (this.#pcmPtr !== 0) {
-      this.#module._free(this.#pcmPtr);
-    }
-    this.#packetPtr = 0;
-    this.#packetBytes = 0;
-    this.#pcmPtr = 0;
-    this.#pcmBytes = 0;
-  }
 }
 
 class WasmOpusDecoder implements OpusDecoderHandle {
@@ -522,14 +510,14 @@ class WasmOpusDecoder implements OpusDecoderHandle {
   readonly sampleRate: SampleRate;
   #freed = false;
   #module: LibopusModule;
-  #packetBytes = 0;
-  #packetPtr = 0;
-  #pcmBytes = 0;
-  #pcmPtr = 0;
+  #packet: WasmBuffer;
+  #pcm: WasmBuffer;
   #ptr: number;
 
   constructor(module: LibopusModule, options: NormalizedDecoderOptions) {
     this.#module = module;
+    this.#packet = new WasmBuffer(module);
+    this.#pcm = new WasmBuffer(module);
     this.channels = options.channels;
     this.maxFrameSize = options.maxFrameSize;
     this.sampleRate = options.sampleRate;
@@ -550,7 +538,7 @@ class WasmOpusDecoder implements OpusDecoderHandle {
     this.#assertLive();
     const frameSize = this.#resolveDecodeFrameSize(packet, options);
     const pcmBytes = frameSize * this.channels * 2;
-    const pcmPtr = this.#ensurePcmBytes(pcmBytes);
+    const pcmPtr = this.#pcm.ensure(pcmBytes);
     const { packetLength, packetPtr } = this.#copyPacket(packet, options.decodeFec);
     const decodedSamples = this.#module._oc_decode(
       this.#ptr,
@@ -571,7 +559,7 @@ class WasmOpusDecoder implements OpusDecoderHandle {
     this.#assertLive();
     const frameSize = this.#resolveDecodeFrameSize(packet, options);
     const pcmBytes = frameSize * this.channels * 4;
-    const pcmPtr = this.#ensurePcmBytes(pcmBytes);
+    const pcmPtr = this.#pcm.ensure(pcmBytes);
     const { packetLength, packetPtr } = this.#copyPacket(packet, options.decodeFec);
     const decodedSamples = this.#module._oc_decode_float(
       this.#ptr,
@@ -625,7 +613,8 @@ class WasmOpusDecoder implements OpusDecoderHandle {
     if (this.#freed) {
       return;
     }
-    this.#freeScratch();
+    this.#packet.free();
+    this.#pcm.free();
     this.#module._oc_destroy_decoder(this.#ptr);
     this.#freed = true;
   }
@@ -650,48 +639,9 @@ class WasmOpusDecoder implements OpusDecoderHandle {
     if (packet.byteLength === 0) {
       throw new RangeError("packet must not be empty; use null or decodePacketLoss() for PLC");
     }
-    const packetPtr = this.#ensurePacketBytes(packet.byteLength);
+    const packetPtr = this.#packet.ensure(packet.byteLength);
     this.#module.HEAPU8.set(packet, packetPtr);
     return { packetLength: packet.byteLength, packetPtr };
-  }
-
-  #ensurePacketBytes(requiredBytes: number): number {
-    if (this.#packetPtr !== 0 && this.#packetBytes >= requiredBytes) {
-      return this.#packetPtr;
-    }
-    const nextPtr = checkedMalloc(this.#module, requiredBytes);
-    if (this.#packetPtr !== 0) {
-      this.#module._free(this.#packetPtr);
-    }
-    this.#packetPtr = nextPtr;
-    this.#packetBytes = requiredBytes;
-    return this.#packetPtr;
-  }
-
-  #ensurePcmBytes(requiredBytes: number): number {
-    if (this.#pcmPtr !== 0 && this.#pcmBytes >= requiredBytes) {
-      return this.#pcmPtr;
-    }
-    const nextPtr = checkedMalloc(this.#module, requiredBytes);
-    if (this.#pcmPtr !== 0) {
-      this.#module._free(this.#pcmPtr);
-    }
-    this.#pcmPtr = nextPtr;
-    this.#pcmBytes = requiredBytes;
-    return this.#pcmPtr;
-  }
-
-  #freeScratch(): void {
-    if (this.#packetPtr !== 0) {
-      this.#module._free(this.#packetPtr);
-    }
-    if (this.#pcmPtr !== 0) {
-      this.#module._free(this.#pcmPtr);
-    }
-    this.#packetPtr = 0;
-    this.#packetBytes = 0;
-    this.#pcmPtr = 0;
-    this.#pcmBytes = 0;
   }
 
   #resolveDecodeFrameSize(packet: Uint8Array | null, options: DecodeOptions): number {

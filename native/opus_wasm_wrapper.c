@@ -132,10 +132,6 @@ int oc_packet_get_nb_channels(const unsigned char *data) {
   return opus_packet_get_nb_channels(data);
 }
 
-int oc_packet_get_nb_frames(const unsigned char *data, opus_int32 len) {
-  return opus_packet_get_nb_frames(data, len);
-}
-
 int oc_packet_get_nb_samples(const unsigned char *data, opus_int32 len, opus_int32 sample_rate) {
   return opus_packet_get_nb_samples(data, len, sample_rate);
 }
