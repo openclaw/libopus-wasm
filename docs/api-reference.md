@@ -129,8 +129,8 @@ Passed to `createDecoder`. All fields are optional.
 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
-| `sampleRate` | `SampleRate` | `48000` | Must match the encoder. |
-| `channels` | `1 \| 2` | `2` | Must match the encoder. |
+| `sampleRate` | `SampleRate` | `48000` | Output PCM sample rate; may differ from the encoder. |
+| `channels` | `1 \| 2` | `2` | Output PCM channels; libopus converts mono/stereo as needed. |
 | `maxFrameSize` | `number` | 120 ms | Output capacity in samples/channel. |
 
 ### EncodeOptions

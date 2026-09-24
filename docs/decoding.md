@@ -9,14 +9,18 @@ is stateful per stream but works one packet at a time.
 import { createDecoder } from "libopus-wasm";
 
 const decoder = await createDecoder({
-  sampleRate: 48000, // must match how the stream was encoded
+  sampleRate: 48000, // output PCM sample rate
   channels: 2,
 });
 ```
 
-The decoder's sample rate and channel count must match the encoder that
-produced the packets. There is no in-band signalling of these in a raw Opus
-packet, so you carry them out of band (the same way Discord and WebRTC do).
+Choose the sample rate and channel count for your output PCM. They do not have
+to match the encoder: libopus decodes at any supported sample rate and converts
+mono packets to stereo or stereo packets to mono as requested. For example, a
+20 ms packet encoded at 48 kHz decodes to 320 samples per channel at 16 kHz.
+
+The packet signals its encoded channel count, but not the encoder's original
+PCM sample rate. Configure playback to use the decoder's output format.
 
 ## Int16 PCM
 
