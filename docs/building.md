@@ -56,8 +56,9 @@ pnpm typecheck
 pnpm clean   # removes dist/ and the .cache/ build directory
 ```
 
-The first build downloads and compiles libopus into `.cache/`, which takes a
-while; later builds reuse it. `pnpm clean` forces a fresh download and compile.
+The first build downloads and extracts libopus into `.cache/`; later builds
+reuse that source. Every build recompiles libopus and the wrapper. `pnpm clean`
+also removes the cached download and source.
 
 ## How the WASM is packaged
 

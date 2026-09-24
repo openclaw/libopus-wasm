@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Correct decoder documentation to describe selectable output sample rates and mono/stereo conversion, and clarify that source builds recompile cached libopus sources.
 - Reject CTL values and numeric bitrates outside signed 32-bit bounds and invalid application modes before WebAssembly can coerce them into different settings; correct the Q8 decoder gain examples.
 - Free partially initialized Discord adapters when either codec fails, and reject failed WASM error-buffer allocations before creating native codecs.
 
