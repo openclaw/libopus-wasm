@@ -33,7 +33,8 @@
     "CHANGELOG.md",
     "LICENSE",
     "README.md",
-    "THIRD_PARTY_NOTICES.md"
+    "THIRD_PARTY_NOTICES.md",
+    "scripts/release-smoke.mjs"
   ],
   "scripts": {
     "build": "pnpm build:wasm && tsc -p tsconfig.json && node scripts/copy-generated.mjs",

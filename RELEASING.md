@@ -1,45 +1,47 @@
 # Releasing
 
-Releases are published manually; pushing a tag does not publish to npm. Use an
-npm account with publish access to `libopus-wasm` and a GitHub account with write
-access to this repository.
+`libopus-wasm` ships an npm tarball and a GitHub Release through
+`release-npm-package.yml`. The build uses the same pinned Emscripten and pnpm
+versions as CI. Two clean Linux architectures install the frozen tarball with
+lifecycle scripts disabled and check real encode/decode through both public
+entrypoints. The publisher consumes only verified tarball bytes, then checks npm
+integrity, signatures, and provenance before creating the GitHub Release with
+changelog notes, package plan, inventory, tarball, and `SHA256SUMS`.
 
-1. Update `package.json` to the release version. Move the `Unreleased` entries
-   into `## X.Y.Z - YYYY-MM-DD`, with a one-line **Highlights:** paragraph. Keep
-   an empty `## Unreleased` section above the release.
-2. Open a release PR. Review the change and wait for CI on its exact head to
-   pass on Node.js 22, 24, and 26 before merging.
-3. From the clean merged release commit, with the Emscripten version pinned in
-   `.github/workflows/ci.yml` on `PATH`, run:
+The `Release` workflow calls the shared OpenClaw archetype at `@v1`. It
+requires a protected `main`, matching version metadata, a dated changelog section,
+and successful independent **push** CI on the exact release commit. It verifies
+SSH-signed annotated tags against `.github/release-allowed-signers` and rejects
+moved tags or an existing GitHub Release.
 
-   ```sh
-   pnpm install --frozen-lockfile
-   pnpm build
-   pnpm test
-   pnpm typecheck
-   pnpm docs:build
-   pnpm pack
-   ```
+Prepare the version and dated `## X.Y.Z - YYYY-MM-DD` changelog section in a PR,
+retain `## Unreleased`, and merge only after CI and review. After explicit release
+authorization, create and push an SSH-signed annotated `vX.Y.Z` tag at that merged
+commit using an allowed signing key. Tag pushes publish through Actions; manual
+GitHub Release creation is retired. A live dispatch cannot create a missing signed
+tag: create the signed tag first.
 
-4. Install the resulting tarball in a temporary consumer project and check
-   both `libopus-wasm` and `libopus-wasm/discordjs` encode/decode roundtrips.
-   Publish that tested tarball, rather than rebuilding on the publishing host:
+For a no-publish rehearsal, dispatch `release.yml` on current `main` with a version
+that already has a dated changelog section and `dry_run=true` (the default):
 
-   ```sh
-   npm publish /path/to/libopus-wasm-X.Y.Z.tgz --access public
-   ```
+```sh
+gh workflow run release.yml --ref main -f version=0.4.1 -f dry_run=true
+```
 
-5. Tag the merged commit as `vX.Y.Z` and push the tag. Create a published GitHub
-   Release with the exact changelog section, plus links to the npm version,
-   registry tarball, release commit, and CI proof. Include the registry integrity
-   value and attach the tested tarball if desired.
-6. Verify that the GitHub Release is not a draft, its notes match the changelog,
-   and npm reports the version, `latest` dist-tag, tarball URL, integrity, and
-   publication time:
+The rehearsal exercises current protected main, even when the version already has
+an older tag. It creates no tag, release, or registry publication. Inspect every
+job and the retained verification artifacts before release. Real releases never
+move a tag or overwrite an existing version.
 
-   ```sh
-   npm view libopus-wasm@X.Y.Z version dist-tags dist time --json
-   ```
+The existing `libopus-wasm` npm package must trust the caller `release.yml` in
+`openclaw/libopus-wasm`. Publication uses GitHub OIDC; no npm token secret is
+required or accepted. Stable versions use `latest`, prereleases use `next`.
+Local `npm publish` is retired. Local `pnpm build`, `pnpm pack`, and the packaged
+`scripts/release-smoke.mjs` remain available for read-only verification.
 
-Leave `main` clean and up to date, preserve the empty `Unreleased` section, and
-remove temporary consumer directories and local release artifacts.
+After publication, verify the Actions result, GitHub Release notes and checksum
+assets, and registry metadata:
+
+```sh
+npm view libopus-wasm@X.Y.Z version dist-tags dist time --json
+```
