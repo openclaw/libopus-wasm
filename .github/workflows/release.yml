@@ -35,7 +35,7 @@ jobs:
       require-signed-tag: true
       strict-checks: true
       ci-check-events: '["push"]'
-      node-version: '24'
+      node-version: '24.22.1'
       package-manager: pnpm
       package-manager-version: '11.27.1'
       install-command: bash scripts/release-toolchain.sh && pnpm install --frozen-lockfile
