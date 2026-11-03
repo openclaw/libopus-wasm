@@ -36,5 +36,12 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      - run: pnpm test
-      - run: pnpm pack --dry-run
+      - run: pnpm exec vitest run
+      - name: Test installed package
+        run: |
+          pnpm --config.ignore-scripts=true pack --out "$RUNNER_TEMP/libopus-wasm.tgz"
+          mkdir "$RUNNER_TEMP/libopus-consumer"
+          cd "$RUNNER_TEMP/libopus-consumer"
+          npm init --yes
+          npm install --ignore-scripts --no-audit --no-fund "$RUNNER_TEMP/libopus-wasm.tgz"
+          node node_modules/libopus-wasm/scripts/release-smoke.mjs
