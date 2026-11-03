@@ -9,6 +9,7 @@ try {
   const packet = encoder.encode(pcm);
   assert.ok(packet.byteLength > 0);
   assert.equal((await getPacketInfo(packet)).samples, encoder.frameSize);
+  decoder.reset();
   const decoded = decoder.decode(packet);
   assert.equal(decoded.length, pcm.length);
   assert.ok(decoded.some((sample) => sample !== 0), "decoded audio must not be silent");

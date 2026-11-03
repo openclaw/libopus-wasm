@@ -67,6 +67,7 @@ load cost and later calls are cheap.
 | `getLookahead()` | `number` | Encoder algorithmic delay in samples. |
 | `getInDtx()` | `boolean` | Whether the encoder is currently in a DTX period. |
 | `encoderCtl(request, value)` | `void` | Integer-setter [CTL passthrough](ctl.md). |
+| `reset()` | `void` | Clear stream history, preserving encoder settings. |
 | `free()` | `void` | Release the underlying encoder. Idempotent. |
 | `[Symbol.dispose]()` | `void` | Calls `free()`; enables `using` declarations. |
 
@@ -96,6 +97,7 @@ bytes. The frame must contain exactly `frameSize * channels` samples.
 | `decodePacketLoss(frameSize?)` | `Int16Array` | Synthesize one PLC frame (defaults to 20 ms). |
 | `decodePacketLossFloat(frameSize?)` | `Float32Array` | Float32 PLC variant. |
 | `decoderCtl(request, value)` | `void` | Integer-setter [CTL passthrough](ctl.md). |
+| `reset()` | `void` | Clear decoder history before an independent stream. |
 | `free()` | `void` | Release the underlying decoder. Idempotent. |
 | `[Symbol.dispose]()` | `void` | Calls `free()`; enables `using` declarations. |
 

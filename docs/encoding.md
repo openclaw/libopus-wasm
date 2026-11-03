@@ -103,6 +103,18 @@ encoder.encode(frame, { maxPacketBytes: 1275 }); // RFC 6716 max for one frame
 a requested packet length: larger ceilings may use a smaller internal capacity
 and do not force allocation or padding to that size.
 
+## Switching streams
+
+Call `encoder.reset()` before processing an independent stream or seeking to a
+new stream boundary. Reset clears codec history without reallocating the handle
+and preserves its configured settings. It does not flush delayed audio or make
+arbitrary packet positions independently decodable. Keep using `free()` at the
+end of the handle's lifetime; resetting a freed handle throws.
+
+```ts
+encoder.reset();
+```
+
 ## Next
 
 - [Decoding](decoding.md) — turn packets back into PCM.

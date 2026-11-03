@@ -31,6 +31,8 @@ type LibopusModule = {
   ) => number;
   _oc_destroy_decoder: (decoderPtr: number) => void;
   _oc_destroy_encoder: (encoderPtr: number) => void;
+  _oc_reset_encoder: (encoderPtr: number) => number;
+  _oc_reset_decoder: (decoderPtr: number) => number;
   _oc_decoder_ctl: (decoderPtr: number, request: number, value: number) => number;
   _oc_encode: (
     encoderPtr: number,

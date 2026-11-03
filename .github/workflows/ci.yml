@@ -37,6 +37,14 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm exec vitest run
+      - run: pnpm test:integrations
+      - run: pnpm size:check
+      - name: Install Chromium
+        if: matrix.node == '24.22.1'
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Test Worker and AudioWorklet integration
+        if: matrix.node == '24.22.1'
+        run: pnpm exec playwright test
       - name: Test installed package
         run: |
           pnpm --config.ignore-scripts=true pack --out "$RUNNER_TEMP/libopus-wasm.tgz"

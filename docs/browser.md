@@ -17,16 +17,27 @@ const encoder = await createEncoder();
 
 ## Bundlers
 
-Because the module is a self-contained ES module, every modern bundler handles
-it without plugins or asset rules:
+The single-file ES module needs no external WASM asset rule. CI builds the
+browser entry with Vite and exercises Chromium plus a module Worker. Other
+bundlers can consume ESM, but are not part of this repository's verified matrix.
 
-- **Vite** — works out of the box; no `assetsInclude` or `vite-plugin-wasm`.
-- **webpack 5** — works without `experiments.asyncWebAssembly`.
-- **esbuild / Rollup** — bundles as ordinary ESM.
+`pnpm size:check` reports minified browser JavaScript, gzip bytes and built
+package bytes separately. The core must keep zero runtime dependencies; its
+browser bundle has a 220 KB gzip ceiling. This is a regression guard, not a
+claim about network transfer or memory use.
 
-The WASM is inlined, so it trades a slightly larger JS payload for zero runtime
-fetching and zero deploy-time asset wiring. The module loads lazily on the first
-`createEncoder` / `createDecoder` call and is shared across every handle.
+## Worker and AudioWorklet example
+
+Run `pnpm build`, then `pnpm exec vite` and open `/examples/browser.html`.
+The example sends 128-sample AudioWorklet blocks to a module Worker, assembles
+960-sample mono frames in one reusable buffer, encodes there and decodes back on
+the main thread. The button uses a synthetic tone, so no microphone permission
+is needed. It closes the context, worker and codecs after five packets.
+
+The codec runs in the Worker, not on the AudioWorklet rendering thread. For a
+microphone, feed the capture node from your `MediaStreamAudioSourceNode` and
+stop the media tracks when finished. Keep capture queues bounded in a long-lived
+application; the short demo does not implement transport congestion control.
 
 ## Capturing microphone audio
 

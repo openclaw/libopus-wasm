@@ -1,0 +1,71 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Opus worker example</title>
+<button id="start">Encode a tone through an AudioWorklet and Worker</button>
+<output id="status">Ready</output>
+<script type="module">
+  import { createDecoder } from "../dist/index.js";
+  document.querySelector("#start").onclick = async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    const status = document.querySelector("#status");
+    const context = new AudioContext({ sampleRate: 48000 });
+    const worker = new Worker(new URL("./encode-worker.js", import.meta.url), { type: "module" });
+    const ready = new Promise((resolve, reject) => {
+      worker.onerror = reject;
+      worker.onmessage = ({ data }) => data.type === "ready" ? resolve() : reject(new Error(data.message));
+    });
+    ready.catch(() => undefined); // The awaited startup below still surfaces failures.
+    let decoder;
+    let source;
+    let capture;
+    let packets = 0;
+    let started = false;
+    let closing;
+    const cleanup = () => closing ??= (async () => {
+      if (capture) capture.port.onmessage = null;
+      worker.onmessage = null;
+      worker.onerror = null;
+      if (started) source.stop();
+      source?.disconnect();
+      capture?.disconnect();
+      worker.terminate();
+      decoder?.free();
+      await context.close();
+      button.disabled = false;
+    })();
+    try {
+      await context.resume();
+      decoder = await createDecoder({ channels: 1 });
+      await ready;
+      await context.audioWorklet.addModule(new URL("./capture-worklet.js", import.meta.url));
+      capture = new AudioWorkletNode(context, "opus-capture");
+      capture.port.onmessage = ({ data: samples }) => worker.postMessage({ type: "pcm", samples }, [samples.buffer]);
+      worker.onmessage = ({ data }) => {
+        try {
+          if (data.type === "error") throw new Error(data.message);
+          if (data.type === "packet") {
+            const pcm = decoder.decodeFloat(data.packet);
+            if (pcm.length !== 960) throw new Error("Unexpected decoded frame length");
+            status.textContent = `Decoded ${++packets} packets`;
+            if (packets === 5) void cleanup();
+          }
+        } catch (error) {
+          status.textContent = String(error);
+          void cleanup();
+        }
+      };
+      worker.onerror = error => {
+        status.textContent = error.message;
+        void cleanup();
+      };
+      source = new OscillatorNode(context, { frequency: 440 });
+      source.connect(capture).connect(context.destination);
+      source.start();
+      started = true;
+    } catch (error) {
+      status.textContent = String(error);
+      await cleanup();
+    }
+  };
+</script>
