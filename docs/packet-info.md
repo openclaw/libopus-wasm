@@ -1,9 +1,8 @@
 # Packet inspection
 
-`getPacketInfo` reads the header of a raw Opus packet and reports what it
-contains — duration, frame count, channels, and bandwidth — without decoding the
-audio. It is the cheap way to validate an incoming packet or to learn its shape
-before you hand it to a decoder.
+`getPacketInfo` validates a raw Opus packet and reports its duration, frame count,
+channels, and bandwidth. Validation decodes the packet with a temporary native
+decoder and discards the audio; it does not advance your stream decoder.
 
 ```ts
 import { getPacketInfo } from "libopus-wasm";
@@ -19,13 +18,13 @@ info.bandwidth;       // Bandwidth.Fullband
 ```
 
 Like the factories, the first call lazily loads the shared WASM module; later
-calls are cheap.
+calls reuse the module, but still allocate a temporary decoder and validate the packet.
 
 ## Sample rate
 
-Opus packets do not carry their sample rate in band, so `durationMs`, `samples`,
-and `samplesPerFrame` are computed against the rate you pass — `48000` Hz by
-default. Pass the rate the stream was encoded at to get accurate timing:
+`sampleRate` selects the output rate used to express `samples` and
+`samplesPerFrame` — `48000` Hz by default. It need not match the encoder's input
+rate. `durationMs` stays the same at every supported rate. For output at 16000 Hz:
 
 ```ts
 const info = await getPacketInfo(packet, { sampleRate: 16000 });

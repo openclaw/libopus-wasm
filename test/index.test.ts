@@ -47,8 +47,8 @@ describe("libopus-wasm", () => {
     }
   });
 
-  it("encodes and decodes batches", async () => {
-    const encoder = await createEncoder({
+  it.each([false, true])("preserves batch order and output ownership (float=%s)", async (float) => {
+    const options = {
       bitrate: 64_000,
       channels: 2,
       complexity: 7,
@@ -60,23 +60,35 @@ describe("libopus-wasm", () => {
       signal: Signal.Music,
       vbr: true,
       vbrConstraint: true,
-    });
-    const decoder = await createDecoder({ channels: 2, sampleRate: 48_000 });
-    try {
-      const frames = [makeSineFrame(960, 2), makeSineFrame(960, 2)];
-
-      const packets = encoder.encodeFrames(frames);
-      const decoded = decoder.decodeFrames(packets);
-
-      expect(packets).toHaveLength(2);
-      expect(decoded.map((frame) => frame.length)).toEqual([1920, 1920]);
-      expect(encoder.getBitrate()).toBe(64_000);
-      expect(encoder.getLookahead()).toBeGreaterThan(0);
-      expect(encoder.getInDtx()).toBe(false);
-    } finally {
-      encoder.free();
-      decoder.free();
-    }
+    } as const;
+    using encoder = await createEncoder(options);
+    using referenceEncoder = await createEncoder(options);
+    using decoder = await createDecoder();
+    using referenceDecoder = await createDecoder();
+    const first = makeSineFrame(960, 2);
+    const frames = [first, Int16Array.from(first, (sample) => -sample)];
+    const floatFrames = frames.map((frame) => Float32Array.from(frame, (sample) => sample / 32768));
+    const packets = float ? encoder.encodeFloatFrames(floatFrames) : encoder.encodeFrames(frames);
+    // Copy each reference result before the next call can reuse native scratch.
+    const expectedPackets = frames.map((frame, i) =>
+      (float ? referenceEncoder.encodeFloat(floatFrames[i]!) : referenceEncoder.encode(frame)).slice(),
+    );
+    expect(packets).toEqual(expectedPackets);
+    expect(packets[0]).not.toEqual(packets[1]);
+    const decoded = float ? decoder.decodeFloatFrames(packets) : decoder.decodeFrames(packets);
+    const expectedFrames = expectedPackets.map((packet) =>
+      (float ? referenceDecoder.decodeFloat(packet) : referenceDecoder.decode(packet)).slice(),
+    );
+    expect(decoded).toEqual(expectedFrames);
+    expect(decoded.map((frame) => frame.length)).toEqual([1920, 1920]);
+    expect(decoded[0]!.some((sample) => sample !== 0)).toBe(true);
+    encoder.encode(first);
+    decoder.decode(expectedPackets[0]!);
+    expect(packets).toEqual(expectedPackets);
+    expect(decoded).toEqual(expectedFrames);
+    expect(encoder.getBitrate()).toBe(64_000);
+    expect(encoder.getLookahead()).toBeGreaterThan(0);
+    expect(encoder.getInDtx()).toBe(false);
   });
 
   it("derives 20 ms default frames from non-48 kHz sample rates", async () => {
@@ -155,7 +167,7 @@ describe("libopus-wasm", () => {
     },
   );
 
-  it("reports raw packet metadata without decoding", async () => {
+  it("validates raw packets and reports their metadata", async () => {
     const encoder = await createEncoder({ frameSize: 960, sampleRate: 48_000 });
     try {
       const packet = encoder.encode(makeSineFrame(encoder.frameSize, encoder.channels));
@@ -177,13 +189,16 @@ describe("libopus-wasm", () => {
     const encoder = await createEncoder({ channels: 1, sampleRate: 16_000 });
     try {
       const packet = encoder.encode(makeSineFrame(encoder.frameSize, encoder.channels));
-      const info = await getPacketInfo(packet, { sampleRate: 16_000 });
-
-      expect(info.channels).toBe(1);
-      expect(info.durationMs).toBe(20);
-      expect(info.samples).toBe(320);
-      expect(info.samplesPerFrame).toBe(320);
-      expect(info.sampleRate).toBe(16_000);
+      for (const sampleRate of [8000, 12000, 16000, 24000, 48000] as const) {
+        const info = await getPacketInfo(packet, { sampleRate });
+        expect(info).toMatchObject({
+          channels: 1,
+          durationMs: 20,
+          samples: sampleRate / 50,
+          samplesPerFrame: sampleRate / 50,
+          sampleRate,
+        });
+      }
     } finally {
       encoder.free();
     }
@@ -217,6 +232,36 @@ describe("libopus-wasm", () => {
       encoder.free();
       decoder.free();
     }
+  });
+
+  it.each([false, true])("recovers a missing frame from in-band FEC (float=%s)", async (float) => {
+    using encoder = await createEncoder({
+      application: Application.Voip,
+      channels: 1,
+      sampleRate: 16_000,
+      bitrate: 20_000,
+      fec: true,
+      packetLossPercent: 30,
+    });
+    using recoveredDecoder = await createDecoder({ channels: 1, sampleRate: 16_000 });
+    using concealedDecoder = await createDecoder({ channels: 1, sampleRate: 16_000 });
+    using normalDecoder = await createDecoder({ channels: 1, sampleRate: 16_000 });
+    const packets = encoder.encodeFrames(Array.from({ length: 6 }, () => makeSineFrame(320, 1)));
+    const decode = (decoder: typeof recoveredDecoder, packet: Uint8Array | null, decodeFec = false) =>
+      float ? decoder.decodeFloat(packet, { frameSize: 320, decodeFec })
+        : decoder.decode(packet, { frameSize: 320, decodeFec });
+    for (const packet of packets.slice(0, 4)) {
+      decode(recoveredDecoder, packet);
+      decode(concealedDecoder, packet);
+      decode(normalDecoder, packet);
+    }
+    // Packet 4 is lost; packet 5 must recover it before decoding packet 5 normally.
+    const recovered = decode(recoveredDecoder, packets[5]!, true);
+    const concealed = decode(concealedDecoder, null);
+    expect(recovered).toHaveLength(320);
+    expect(recovered).not.toEqual(concealed);
+    expect(recovered).not.toEqual(decode(normalDecoder, packets[5]!));
+    expect(decode(recoveredDecoder, packets[5]!)).toHaveLength(320);
   });
 
   it("rejects pointer-style CTL requests at the JS boundary", async () => {
