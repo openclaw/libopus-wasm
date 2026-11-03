@@ -10,17 +10,19 @@ const builder = path.join(repoRoot, "scripts", "build-docs-site.mjs");
 
 describe("docs site discovery and URLs", () => {
   it.each([
-    { cname: "", broken: false },
-    { cname: "docs.example.com", broken: false },
-    { cname: "docs.example.com", broken: true },
-  ])("handles nested pages with %j", ({ cname, broken }) => {
+    { cname: "", nested: false, broken: false },
+    { cname: "", nested: true, broken: false },
+    { cname: "", nested: true, broken: true },
+    { cname: "docs.example.com", nested: true, broken: false },
+    { cname: "docs.example.com", nested: true, broken: true },
+  ])("handles nested pages with %j", ({ cname, nested, broken }) => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "libopus-docs-test-"));
     const docs = path.join(root, "docs");
     const output = path.join(root, "dist", "docs-site");
     try {
-      const section = cname ? "guide" : "";
-      const guideSource = cname ? "guide/README.md" : "guide.md";
-      const guideOutput = cname ? "guide/index.html" : "guide.html";
+      const section = nested ? "guide/deep" : "";
+      const guideSource = nested ? `${section}/README.md` : "guide.md";
+      const guideOutput = nested ? `${section}/index.html` : "guide.html";
       fs.mkdirSync(path.join(docs, section), { recursive: true });
       fs.writeFileSync(path.join(docs, "index.md"), `# Home\n\n[Guide](${guideSource})\n`);
       fs.writeFileSync(path.join(docs, "install.md"), "# Install\n");
@@ -43,10 +45,12 @@ describe("docs site discovery and URLs", () => {
       expect(guide).toContain('href="details.html#topic"');
       expect(details).toContain('id="topic"');
       expect(fs.existsSync(path.join(output, "ignored.html"))).toBe(false);
-      expect(guide).toContain(`rel="canonical" href="${cname ? `https://${cname}/guide/` : "guide.html"}"`);
+      expect(guide).toContain(`rel="canonical" href="${cname ? `https://${cname}/${section}/` : nested ? "index.html" : "guide.html"}"`);
+      expect(details).toContain(`rel="canonical" href="${cname ? `https://${cname}/${section}/details.html` : "details.html"}"`);
+      expect(details).toContain(`property="og:url" content="${cname ? `https://${cname}/${section}/details.html` : "details.html"}"`);
       expect(home).toContain(`rel="canonical" href="${cname ? `https://${cname}/` : "index.html"}"`);
-      expect(llms).toContain(`- Guide: ${cname ? `https://${cname}/guide/` : "guide.html"}`);
-      expect(llms).toContain(`- Details: ${cname ? `https://${cname}/guide/` : ""}details.html`);
+      expect(llms).toContain(`- Guide: ${cname ? `https://${cname}/` : ""}${nested ? `${section}/` : "guide.html"}`);
+      expect(llms).toContain(`- Details: ${cname ? `https://${cname}/` : ""}${nested ? `${section}/` : ""}details.html`);
       build();
       expect(fs.readFileSync(path.join(output, guideOutput), "utf8")).toBe(guide);
       expect(fs.readFileSync(path.join(output, "llms.txt"), "utf8")).toBe(llms);

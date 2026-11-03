@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Resolve canonical URLs relative to each generated page when building nested documentation without a CNAME.
 - Bound encoder scratch capacity to libopus's effective packet budget so large `maxPacketBytes` ceilings cannot exhaust the WebAssembly stack on long frames.
 
 ## 0.4.1 - 2026-09-24

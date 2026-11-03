@@ -534,7 +534,7 @@ function layout({ page, html, toc, prev, next, sectionName }) {
 }
 
 function pageCanonicalUrl(page) {
-  return siteBase ? pageUrl(siteBase, page.outRel) : page.outRel;
+  return siteBase ? pageUrl(siteBase, page.outRel) : path.posix.basename(page.outRel);
 }
 
 function tagHtml([tag, k1, v1, k2, v2]) {
