@@ -99,6 +99,10 @@ than enough for any single Opus frame. Lower it if you want a hard ceiling:
 encoder.encode(frame, { maxPacketBytes: 1275 }); // RFC 6716 max for one frame
 ```
 
+`maxPacketBytes` accepts integers from 1 to 2147483647. It is a ceiling, not
+a requested packet length: larger ceilings may use a smaller internal capacity
+and do not force allocation or padding to that size.
+
 ## Next
 
 - [Decoding](decoding.md) — turn packets back into PCM.

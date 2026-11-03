@@ -8,6 +8,58 @@ import { describe, expect, it } from "vitest";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const builder = path.join(repoRoot, "scripts", "build-docs-site.mjs");
 
+describe("docs site discovery and URLs", () => {
+  it.each([
+    { cname: "", nested: false, broken: false },
+    { cname: "", nested: true, broken: false },
+    { cname: "", nested: true, broken: true },
+    { cname: "docs.example.com", nested: true, broken: false },
+    { cname: "docs.example.com", nested: true, broken: true },
+  ])("handles nested pages with %j", ({ cname, nested, broken }) => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "libopus-docs-test-"));
+    const docs = path.join(root, "docs");
+    const output = path.join(root, "dist", "docs-site");
+    try {
+      const section = nested ? "guide/deep" : "";
+      const guideSource = nested ? `${section}/README.md` : "guide.md";
+      const guideOutput = nested ? `${section}/index.html` : "guide.html";
+      fs.mkdirSync(path.join(docs, section), { recursive: true });
+      fs.writeFileSync(path.join(docs, "index.md"), `# Home\n\n[Guide](${guideSource})\n`);
+      fs.writeFileSync(path.join(docs, "install.md"), "# Install\n");
+      fs.writeFileSync(path.join(docs, "quickstart.md"), "# Quickstart\n");
+      fs.writeFileSync(path.join(docs, guideSource),
+        `# Guide\n\n[Details](details.md#${broken ? "missing" : "topic"})\n`);
+      fs.writeFileSync(path.join(docs, section, "details.md"), "# Details\n\n## Topic\n");
+      fs.writeFileSync(path.join(docs, "ignored.txt"), "[Bad](missing.md)");
+      if (cname) fs.writeFileSync(path.join(root, "CNAME"), cname);
+      const build = () => execFileSync(process.execPath, [builder], { cwd: root, stdio: "pipe" });
+      if (broken) {
+        expect(build).toThrow(/missing anchor/);
+        return;
+      }
+      build();
+      const guide = fs.readFileSync(path.join(output, guideOutput), "utf8");
+      const details = fs.readFileSync(path.join(output, section, "details.html"), "utf8");
+      const home = fs.readFileSync(path.join(output, "index.html"), "utf8");
+      const llms = fs.readFileSync(path.join(output, "llms.txt"), "utf8");
+      expect(guide).toContain('href="details.html#topic"');
+      expect(details).toContain('id="topic"');
+      expect(fs.existsSync(path.join(output, "ignored.html"))).toBe(false);
+      expect(guide).toContain(`rel="canonical" href="${cname ? `https://${cname}/${section}/` : nested ? "index.html" : "guide.html"}"`);
+      expect(details).toContain(`rel="canonical" href="${cname ? `https://${cname}/${section}/details.html` : "details.html"}"`);
+      expect(details).toContain(`property="og:url" content="${cname ? `https://${cname}/${section}/details.html` : "details.html"}"`);
+      expect(home).toContain(`rel="canonical" href="${cname ? `https://${cname}/` : "index.html"}"`);
+      expect(llms).toContain(`- Guide: ${cname ? `https://${cname}/` : ""}${nested ? `${section}/` : "guide.html"}`);
+      expect(llms).toContain(`- Details: ${cname ? `https://${cname}/` : ""}${nested ? `${section}/` : ""}details.html`);
+      build();
+      expect(fs.readFileSync(path.join(output, guideOutput), "utf8")).toBe(guide);
+      expect(fs.readFileSync(path.join(output, "llms.txt"), "utf8")).toBe(llms);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
 function buildPage(body: string, checkDeterminism = false): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "libopus-docs-test-"));
   const docs = path.join(root, "docs");

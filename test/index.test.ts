@@ -391,15 +391,27 @@ describe("libopus-wasm", () => {
 
   it("surfaces async discord adapter init failures from sync methods", async () => {
     const opus = new DiscordOpusEncoder(44_100, 2);
-    await expect(opus.ready).rejects.toThrow(RangeError);
+    const cause = await opus.ready.catch((error: unknown) => error);
+    expect(cause).toBeInstanceOf(RangeError);
 
-    expect(() => opus.encode(Buffer.alloc(960 * 2 * 2))).toThrow(/failed to initialize/);
+    for (const call of [
+      () => opus.encode(Buffer.alloc(960 * 2 * 2)),
+      () => opus.decode(Buffer.from([1, 2, 3])),
+    ]) {
+      expect(call).toThrow(/failed to initialize/);
+      try {
+        call();
+      } catch (error) {
+        expect((error as Error).cause).toBe(cause);
+      }
+    }
   });
 
   it("guards discord adapter readiness, frame sizing, and disposal", async () => {
     const pending = new DiscordOpusEncoder();
     try {
       expect(() => pending.encode(Buffer.alloc(960 * 2 * 2))).toThrow(/not ready/);
+      expect(() => pending.decode(Buffer.from([1, 2, 3]))).toThrow(/not ready/);
     } finally {
       pending.free();
       await pending.ready;

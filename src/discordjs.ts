@@ -57,39 +57,39 @@ export class OpusEncoder {
   }
 
   encode(buf: Buffer | Uint8Array): Buffer {
-    const encoder = this.#requireEncoder();
+    const encoder = this.#requireCodec(this.#encoder);
     const frameSize = inferFrameSize(buf.byteLength, this.channels);
     return Buffer.from(encoder.encode(buf, { frameSize }));
   }
 
   decode(buf: Buffer | Uint8Array): Buffer {
-    const decoder = this.#requireDecoder();
+    const decoder = this.#requireCodec(this.#decoder);
     const pcm = decoder.decode(buf);
     return Buffer.from(pcm.buffer, pcm.byteOffset, pcm.byteLength);
   }
 
   applyEncoderCTL(ctl: number, value: number): void {
-    this.#requireEncoder().encoderCtl(ctl, value);
+    this.#requireCodec(this.#encoder).encoderCtl(ctl, value);
   }
 
   applyDecoderCTL(ctl: number, value: number): void {
-    this.#requireDecoder().decoderCtl(ctl, value);
+    this.#requireCodec(this.#decoder).decoderCtl(ctl, value);
   }
 
   setBitrate(bitrate: number): void {
-    this.#requireEncoder().setBitrate(bitrate);
+    this.#requireCodec(this.#encoder).setBitrate(bitrate);
   }
 
   getBitrate(): number {
-    return this.#requireEncoder().getBitrate();
+    return this.#requireCodec(this.#encoder).getBitrate();
   }
 
   setFEC(enabled: boolean): void {
-    this.#requireEncoder().setFec(enabled);
+    this.#requireCodec(this.#encoder).setFec(enabled);
   }
 
   setPLP(percentage: number): void {
-    this.#requireEncoder().setPacketLossPercent(percentage);
+    this.#requireCodec(this.#encoder).setPacketLossPercent(percentage);
   }
 
   free(): void {
@@ -105,27 +105,14 @@ export class OpusEncoder {
     this.free();
   }
 
-  #requireEncoder(): OpusEncoderHandle {
-    this.#throwInitErrorIfAny();
-    if (!this.#encoder || this.#freed) {
+  #requireCodec<T extends OpusEncoderHandle | OpusDecoderHandle>(codec: T | undefined): T {
+    if (this.#initError) {
+      throw new Error("OpusEncoder failed to initialize", { cause: this.#initError });
+    }
+    if (!codec || this.#freed) {
       throw new Error("OpusEncoder is not ready; await encoder.ready or use OpusEncoder.create()");
     }
-    return this.#encoder;
-  }
-
-  #requireDecoder(): OpusDecoderHandle {
-    this.#throwInitErrorIfAny();
-    if (!this.#decoder || this.#freed) {
-      throw new Error("OpusEncoder is not ready; await encoder.ready or use OpusEncoder.create()");
-    }
-    return this.#decoder;
-  }
-
-  #throwInitErrorIfAny(): void {
-    if (!this.#initError) {
-      return;
-    }
-    throw new Error("OpusEncoder failed to initialize", { cause: this.#initError });
+    return codec;
   }
 }
 

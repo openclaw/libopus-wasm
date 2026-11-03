@@ -32,7 +32,7 @@ const buildExcludes = [];
 fs.rmSync(outDir, { recursive: true, force: true });
 fs.mkdirSync(outDir, { recursive: true });
 
-const allPages = allMarkdown(docsDir).map((file) => {
+const allPages = filesWithExtension(docsDir, ".md").map((file) => {
   const rel = path.relative(docsDir, file).replaceAll(path.sep, "/");
   const raw = fs.readFileSync(file, "utf8");
   const { frontmatter, body } = parseFrontmatter(raw);
@@ -165,13 +165,13 @@ function normalizePermalink(value) {
   return v;
 }
 
-function allMarkdown(dir) {
+function filesWithExtension(dir, extension) {
   return fs
     .readdirSync(dir, { withFileTypes: true })
     .flatMap((entry) => {
       const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) return allMarkdown(full);
-      return entry.name.endsWith(".md") ? [full] : [];
+      if (entry.isDirectory()) return filesWithExtension(full, extension);
+      return entry.name.endsWith(extension) ? [full] : [];
     })
     .sort();
 }
@@ -534,10 +534,7 @@ function layout({ page, html, toc, prev, next, sectionName }) {
 }
 
 function pageCanonicalUrl(page) {
-  if (!siteBase) return page.outRel;
-  if (page.outRel === "index.html") return `${siteBase}/`;
-  const rel = page.outRel.endsWith("/index.html") ? page.outRel.slice(0, -"index.html".length) : page.outRel;
-  return `${siteBase}/${rel}`;
+  return siteBase ? pageUrl(siteBase, page.outRel) : path.posix.basename(page.outRel);
 }
 
 function tagHtml([tag, k1, v1, k2, v2]) {
@@ -723,7 +720,7 @@ function highlightYamlValue(rest) {
 
 function validateLinks(outputDir) {
   const failures = [];
-  for (const file of allHtml(outputDir)) {
+  for (const file of filesWithExtension(outputDir, ".html")) {
     const html = fs.readFileSync(file, "utf8");
     for (const match of html.matchAll(/href="([^"]+)"/g)) {
       const href = match[1];
@@ -748,15 +745,4 @@ function validateLinks(outputDir) {
   if (failures.length) {
     throw new Error(`broken docs links:\n${failures.join("\n")}`);
   }
-}
-
-function allHtml(dir) {
-  return fs
-    .readdirSync(dir, { withFileTypes: true })
-    .flatMap((entry) => {
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) return allHtml(full);
-      return entry.name.endsWith(".html") ? [full] : [];
-    })
-    .sort();
 }
