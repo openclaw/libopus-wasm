@@ -9,6 +9,8 @@ const lifecycle = {
   heapGrew: false,
   encoders: new Set<number>(),
   decoders: new Set<number>(),
+  mallocRequests: [] as number[],
+  nativeCapacities: [] as number[],
   cleanup: () => {},
 };
 
@@ -21,6 +23,7 @@ vi.mock("../src/generated/libopus.generated.mjs", async () => {
       const module = await actual.default();
       const malloc = module._malloc.bind(module);
       module._malloc = (bytes) => {
+        lifecycle.mallocRequests.push(bytes);
         if (lifecycle.growOnNextMalloc) {
           lifecycle.growOnNextMalloc = false;
           const previousBytes = module.HEAPU8.byteLength;
@@ -79,6 +82,7 @@ vi.mock("../src/generated/libopus.generated.mjs", async () => {
       };
       const rejectNext = <Args extends number[]>(operation: string, native: (...args: Args) => number) =>
         (...args: Args): number => {
+          if (operation === "encode" || operation === "encodeFloat") lifecycle.nativeCapacities.push(args[4]!);
           if (lifecycle.failNext === operation) {
             lifecycle.failNext = "";
             return -3;
@@ -110,6 +114,8 @@ afterEach(() => {
   lifecycle.encoderDestroyCalls = 0;
   lifecycle.growOnNextMalloc = false;
   lifecycle.heapGrew = false;
+  lifecycle.mallocRequests = [];
+  lifecycle.nativeCapacities = [];
 });
 
 describe("codec initialization cleanup", () => {
@@ -216,6 +222,17 @@ describe("codec initialization cleanup", () => {
       encoder.free();
       decoder.free();
     }
+  });
+
+  it.each([false, true])("bounds packet allocation and native capacity together (float=%s)", async (float) => {
+    using encoder = await createEncoder({ channels: 1, frameSize: 2880 });
+    lifecycle.mallocRequests = [];
+    const pcm = float ? new Float32Array(2880) : new Int16Array(2880);
+    const options = { maxPacketBytes: 0x7fff_ffff };
+    const packet = float ? encoder.encodeFloat(pcm as Float32Array, options) : encoder.encode(pcm as Int16Array, options);
+    expect(packet.byteLength).toBeGreaterThan(0);
+    expect(lifecycle.mallocRequests).toEqual([pcm.byteLength, 7656]);
+    expect(lifecycle.nativeCapacities).toEqual([7656]);
   });
 
   it("uses current heap views after allocation grows WASM memory", async () => {

@@ -149,6 +149,7 @@ const DEFAULT_CHANNELS = 2 satisfies ChannelCount;
 const DEFAULT_FRAME_DURATION_MS = 20;
 const MAX_PACKET_DURATION_MS = 120;
 const DEFAULT_MAX_PACKET_BYTES = 4000;
+const MAX_ENCODER_PACKET_BYTES = 1276 * 6;
 const MIN_I32 = -0x8000_0000;
 const MAX_I32 = 0x7fff_ffff;
 const DEFAULT_SAMPLE_RATE = 48_000 satisfies SampleRate;
@@ -348,8 +349,11 @@ class WasmOpusEncoder implements OpusEncoderHandle {
     }
     const maxPacketBytes = options.maxPacketBytes ?? DEFAULT_MAX_PACKET_BYTES;
     validateIntegerRange(maxPacketBytes, 1, MAX_I32, "maxPacketBytes");
+    // libopus 1.6.1 caps its effective budget at 1276 * 6, but long-frame
+    // repacketization allocates stack scratch from the supplied capacity.
+    const packetCapacity = Math.min(maxPacketBytes, MAX_ENCODER_PACKET_BYTES);
     const pcmPtr = this.#pcm.ensure(input.byteLength);
-    const packetPtr = this.#packet.ensure(maxPacketBytes);
+    const packetPtr = this.#packet.ensure(packetCapacity);
     // Allocations can replace heap views; keep format-specific writes after both.
     if (float) {
       this.#module.HEAPF32.set(input, pcmPtr >> 2);
@@ -363,7 +367,7 @@ class WasmOpusEncoder implements OpusEncoderHandle {
         pcmPtr,
         frameSize,
         packetPtr,
-        maxPacketBytes,
+        packetCapacity,
       ),
       float ? "encodeFloat" : "encode",
     );
