@@ -212,26 +212,14 @@ export async function getPacketInfo(
   const packetPtr = checkedMalloc(module, packet.byteLength);
   try {
     module.HEAPU8.set(packet, packetPtr);
-    const decodedSamples = module._oc_packet_validate_decode(packetPtr, packet.byteLength, sampleRate);
-    if (decodedSamples < 0) {
-      throw createOpusError(module, decodedSamples, "getPacketInfo");
-    }
-    const frames = module._oc_packet_parse(packetPtr, packet.byteLength);
-    if (frames < 0) {
-      throw createOpusError(module, frames, "getPacketInfo");
-    }
-    const samples = module._oc_packet_get_nb_samples(packetPtr, packet.byteLength, sampleRate);
-    if (samples < 0) {
-      throw createOpusError(module, samples, "getPacketInfo");
-    }
+    checkOpusResult(module, module._oc_packet_validate_decode(packetPtr, packet.byteLength, sampleRate), "getPacketInfo");
+    const frames = checkOpusResult(module, module._oc_packet_parse(packetPtr, packet.byteLength), "getPacketInfo");
+    const samples = checkOpusResult(module, module._oc_packet_get_nb_samples(packetPtr, packet.byteLength, sampleRate), "getPacketInfo");
     const channels = module._oc_packet_get_nb_channels(packetPtr);
     if (channels !== 1 && channels !== 2) {
       throw new OpusError(channels, `libopus getPacketInfo failed (${channels}): invalid channel count`);
     }
-    const bandwidth = module._oc_packet_get_bandwidth(packetPtr);
-    if (bandwidth < 0) {
-      throw createOpusError(module, bandwidth, "getPacketInfo");
-    }
+    const bandwidth = checkOpusResult(module, module._oc_packet_get_bandwidth(packetPtr), "getPacketInfo");
     validateBandwidth(bandwidth as Bandwidth, "packet bandwidth");
     return {
       bandwidth: bandwidth as Bandwidth,
@@ -334,59 +322,51 @@ class WasmOpusEncoder implements OpusEncoderHandle {
   }
 
   encode(pcm: Int16Array | Uint8Array, options: EncodeOptions = {}): Uint8Array {
-    this.#assertLive();
-    const frameSize = options.frameSize ?? this.frameSize;
-    validateEncodeFrameSize(frameSize, this.sampleRate, "frameSize");
-    const pcmBytes = toUint8Array(pcm);
-    const expectedBytes = frameSize * this.channels * 2;
-    if (pcmBytes.byteLength !== expectedBytes) {
-      throw new RangeError(
-        `PCM frame has ${pcmBytes.byteLength} bytes; expected ${expectedBytes} for ${frameSize} samples and ${this.channels} channel(s)`,
-      );
-    }
-    const maxPacketBytes = options.maxPacketBytes ?? DEFAULT_MAX_PACKET_BYTES;
-    validateIntegerRange(maxPacketBytes, 1, MAX_I32, "maxPacketBytes");
-    const pcmPtr = this.#pcm.ensure(pcmBytes.byteLength);
-    const packetPtr = this.#packet.ensure(maxPacketBytes);
-    this.#module.HEAPU8.set(pcmBytes, pcmPtr);
-    const encodedBytes = this.#module._oc_encode(
-      this.#ptr,
-      pcmPtr,
-      frameSize,
-      packetPtr,
-      maxPacketBytes,
-    );
-    if (encodedBytes < 0) {
-      throw createOpusError(this.#module, encodedBytes, "encode");
-    }
-    return this.#module.HEAPU8.slice(packetPtr, packetPtr + encodedBytes);
+    return this.#encode(pcm, options, false);
   }
 
   encodeFloat(pcm: Float32Array, options: EncodeOptions = {}): Uint8Array {
+    return this.#encode(pcm, options, true);
+  }
+
+  #encode(pcm: Int16Array | Uint8Array | Float32Array, options: EncodeOptions, float: boolean): Uint8Array {
     this.#assertLive();
     const frameSize = options.frameSize ?? this.frameSize;
     validateEncodeFrameSize(frameSize, this.sampleRate, "frameSize");
+    const input = float ? (pcm as Float32Array) : toUint8Array(pcm as Int16Array | Uint8Array);
     const expectedSamples = frameSize * this.channels;
-    if (pcm.length !== expectedSamples) {
+    if (float) {
+      if (input.length !== expectedSamples) {
+        throw new RangeError(
+          `Float32 PCM frame has ${input.length} samples; expected ${expectedSamples} for ${frameSize} samples and ${this.channels} channel(s)`,
+        );
+      }
+    } else if (input.byteLength !== expectedSamples * 2) {
       throw new RangeError(
-        `Float32 PCM frame has ${pcm.length} samples; expected ${expectedSamples} for ${frameSize} samples and ${this.channels} channel(s)`,
+        `PCM frame has ${input.byteLength} bytes; expected ${expectedSamples * 2} for ${frameSize} samples and ${this.channels} channel(s)`,
       );
     }
     const maxPacketBytes = options.maxPacketBytes ?? DEFAULT_MAX_PACKET_BYTES;
     validateIntegerRange(maxPacketBytes, 1, MAX_I32, "maxPacketBytes");
-    const pcmPtr = this.#pcm.ensure(pcm.byteLength);
+    const pcmPtr = this.#pcm.ensure(input.byteLength);
     const packetPtr = this.#packet.ensure(maxPacketBytes);
-    this.#module.HEAPF32.set(pcm, pcmPtr >> 2);
-    const encodedBytes = this.#module._oc_encode_float(
-      this.#ptr,
-      pcmPtr,
-      frameSize,
-      packetPtr,
-      maxPacketBytes,
-    );
-    if (encodedBytes < 0) {
-      throw createOpusError(this.#module, encodedBytes, "encodeFloat");
+    // Allocations can replace heap views; keep format-specific writes after both.
+    if (float) {
+      this.#module.HEAPF32.set(input, pcmPtr >> 2);
+    } else {
+      this.#module.HEAPU8.set(input, pcmPtr);
     }
+    const encodedBytes = checkOpusResult(
+      this.#module,
+      this.#module[float ? "_oc_encode_float" : "_oc_encode"](
+        this.#ptr,
+        pcmPtr,
+        frameSize,
+        packetPtr,
+        maxPacketBytes,
+      ),
+      float ? "encodeFloat" : "encode",
+    );
     return this.#module.HEAPU8.slice(packetPtr, packetPtr + encodedBytes);
   }
 
@@ -405,7 +385,7 @@ class WasmOpusEncoder implements OpusEncoderHandle {
     if (!ENCODER_INTEGER_CTL_REQUESTS.has(request)) {
       throw new RangeError("encoderCtl only supports integer setter requests");
     }
-    this.#check(this.#module._oc_encoder_ctl(this.#ptr, request, value), "encoderCtl");
+    checkOpusResult(this.#module, this.#module._oc_encoder_ctl(this.#ptr, request, value), "encoderCtl");
   }
 
   setBitrate(bitrate: Bitrate): void {
@@ -414,28 +394,17 @@ class WasmOpusEncoder implements OpusEncoderHandle {
 
   getBitrate(): number {
     this.#assertLive();
-    const bitrate = this.#module._oc_encoder_ctl_get_bitrate(this.#ptr);
-    if (bitrate < 0) {
-      throw createOpusError(this.#module, bitrate, "getBitrate");
-    }
-    return bitrate;
+    return checkOpusResult(this.#module, this.#module._oc_encoder_ctl_get_bitrate(this.#ptr), "getBitrate");
   }
 
   getLookahead(): number {
     this.#assertLive();
-    const lookahead = this.#module._oc_encoder_ctl_get_lookahead(this.#ptr);
-    if (lookahead < 0) {
-      throw createOpusError(this.#module, lookahead, "getLookahead");
-    }
-    return lookahead;
+    return checkOpusResult(this.#module, this.#module._oc_encoder_ctl_get_lookahead(this.#ptr), "getLookahead");
   }
 
   getInDtx(): boolean {
     this.#assertLive();
-    const inDtx = this.#module._oc_encoder_ctl_get_in_dtx(this.#ptr);
-    if (inDtx < 0) {
-      throw createOpusError(this.#module, inDtx, "getInDtx");
-    }
+    const inDtx = checkOpusResult(this.#module, this.#module._oc_encoder_ctl_get_in_dtx(this.#ptr), "getInDtx");
     return inDtx !== 0;
   }
 
@@ -496,12 +465,6 @@ class WasmOpusEncoder implements OpusEncoderHandle {
       throw new Error("OpusEncoder has been freed");
     }
   }
-
-  #check(code: number, operation: string): void {
-    if (code < 0) {
-      throw createOpusError(this.#module, code, operation);
-    }
-  }
 }
 
 class WasmOpusDecoder implements OpusDecoderHandle {
@@ -535,49 +498,40 @@ class WasmOpusDecoder implements OpusDecoderHandle {
   }
 
   decode(packet: Uint8Array | null, options: DecodeOptions = {}): Int16Array {
-    this.#assertLive();
-    const frameSize = this.#resolveDecodeFrameSize(packet, options);
-    const pcmBytes = frameSize * this.channels * 2;
-    const pcmPtr = this.#pcm.ensure(pcmBytes);
-    const { packetLength, packetPtr } = this.#copyPacket(packet, options.decodeFec);
-    const decodedSamples = this.#module._oc_decode(
-      this.#ptr,
-      packetPtr,
-      packetLength,
-      pcmPtr,
-      frameSize,
-      options.decodeFec ? 1 : 0,
-    );
-    if (decodedSamples < 0) {
-      throw createOpusError(this.#module, decodedSamples, packet === null ? "decodePacketLoss" : "decode");
-    }
-    const sampleCount = decodedSamples * this.channels;
-    return this.#module.HEAP16.slice(pcmPtr >> 1, (pcmPtr >> 1) + sampleCount);
+    return this.#decode(packet, options, false);
   }
 
   decodeFloat(packet: Uint8Array | null, options: DecodeOptions = {}): Float32Array {
+    return this.#decode(packet, options, true);
+  }
+
+  #decode(packet: Uint8Array | null, options: DecodeOptions, float: false): Int16Array;
+  #decode(packet: Uint8Array | null, options: DecodeOptions, float: true): Float32Array;
+  #decode(packet: Uint8Array | null, options: DecodeOptions, float: boolean): Int16Array | Float32Array {
     this.#assertLive();
     const frameSize = this.#resolveDecodeFrameSize(packet, options);
-    const pcmBytes = frameSize * this.channels * 4;
-    const pcmPtr = this.#pcm.ensure(pcmBytes);
+    const pcmPtr = this.#pcm.ensure(frameSize * this.channels * (float ? 4 : 2));
     const { packetLength, packetPtr } = this.#copyPacket(packet, options.decodeFec);
-    const decodedSamples = this.#module._oc_decode_float(
-      this.#ptr,
-      packetPtr,
-      packetLength,
-      pcmPtr,
-      frameSize,
-      options.decodeFec ? 1 : 0,
+    const operation = packet === null
+      ? (float ? "decodePacketLossFloat" : "decodePacketLoss")
+      : (float ? "decodeFloat" : "decode");
+    const decodedSamples = checkOpusResult(
+      this.#module,
+      this.#module[float ? "_oc_decode_float" : "_oc_decode"](
+        this.#ptr,
+        packetPtr,
+        packetLength,
+        pcmPtr,
+        frameSize,
+        options.decodeFec ? 1 : 0,
+      ),
+      operation,
     );
-    if (decodedSamples < 0) {
-      throw createOpusError(
-        this.#module,
-        decodedSamples,
-        packet === null ? "decodePacketLossFloat" : "decodeFloat",
-      );
-    }
     const sampleCount = decodedSamples * this.channels;
-    return this.#module.HEAPF32.slice(pcmPtr >> 2, (pcmPtr >> 2) + sampleCount);
+    // Read the current heap after native decoding and return an owned copy.
+    return float
+      ? this.#module.HEAPF32.slice(pcmPtr >> 2, (pcmPtr >> 2) + sampleCount)
+      : this.#module.HEAP16.slice(pcmPtr >> 1, (pcmPtr >> 1) + sampleCount);
   }
 
   decodeFrames(packets: readonly (Uint8Array | null)[], options: DecodeOptions = {}): Int16Array[] {
@@ -603,10 +557,7 @@ class WasmOpusDecoder implements OpusDecoderHandle {
     if (!DECODER_INTEGER_CTL_REQUESTS.has(request)) {
       throw new RangeError("decoderCtl only supports integer setter requests");
     }
-    const code = this.#module._oc_decoder_ctl(this.#ptr, request, value);
-    if (code < 0) {
-      throw createOpusError(this.#module, code, "decoderCtl");
-    }
+    checkOpusResult(this.#module, this.#module._oc_decoder_ctl(this.#ptr, request, value), "decoderCtl");
   }
 
   free(): void {
@@ -722,6 +673,13 @@ function resolveOpusErrorCodeName(code: number): OpusErrorCodeName | undefined {
 function createOpusError(module: LibopusModule, code: number, operation: string): OpusError {
   const message = module.UTF8ToString(module._oc_strerror(code));
   return new OpusError(code, `libopus ${operation} failed (${code}): ${message}`, operation);
+}
+
+function checkOpusResult(module: LibopusModule, code: number, operation: string): number {
+  if (code < 0) {
+    throw createOpusError(module, code, operation);
+  }
+  return code;
 }
 
 function toUint8Array(input: Int16Array | Uint8Array): Uint8Array {

@@ -2,9 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type createLibopusModule from "../src/generated/libopus.generated.mjs";
 
 const lifecycle = {
-  failNext: "" as "" | "encoder" | "decoder" | "malloc" | "encoderCtl",
+  failNext: "" as "" | "encoder" | "decoder" | "malloc" | "encoderCtl" | "encode" | "encodeFloat" | "decode" | "decodeFloat",
   createCalls: 0,
   encoderDestroyCalls: 0,
+  growOnNextMalloc: false,
+  heapGrew: false,
   encoders: new Set<number>(),
   decoders: new Set<number>(),
   cleanup: () => {},
@@ -19,6 +21,13 @@ vi.mock("../src/generated/libopus.generated.mjs", async () => {
       const module = await actual.default();
       const malloc = module._malloc.bind(module);
       module._malloc = (bytes) => {
+        if (lifecycle.growOnNextMalloc) {
+          lifecycle.growOnNextMalloc = false;
+          const previousBytes = module.HEAPU8.byteLength;
+          const growth = malloc(32 * 1024 * 1024);
+          lifecycle.heapGrew = module.HEAPU8.byteLength > previousBytes;
+          module._free(growth);
+        }
         if (lifecycle.failNext === "malloc") {
           lifecycle.failNext = "";
           return 0;
@@ -68,6 +77,18 @@ vi.mock("../src/generated/libopus.generated.mjs", async () => {
         lifecycle.decoders.delete(ptr);
         destroyDecoder(ptr);
       };
+      const rejectNext = <Args extends number[]>(operation: string, native: (...args: Args) => number) =>
+        (...args: Args): number => {
+          if (lifecycle.failNext === operation) {
+            lifecycle.failNext = "";
+            return -3;
+          }
+          return native(...args);
+        };
+      module._oc_encode = rejectNext("encode", module._oc_encode.bind(module));
+      module._oc_encode_float = rejectNext("encodeFloat", module._oc_encode_float.bind(module));
+      module._oc_decode = rejectNext("decode", module._oc_decode.bind(module));
+      module._oc_decode_float = rejectNext("decodeFloat", module._oc_decode_float.bind(module));
       lifecycle.cleanup = () => {
         for (const ptr of lifecycle.encoders) destroyEncoder(ptr);
         for (const ptr of lifecycle.decoders) destroyDecoder(ptr);
@@ -87,6 +108,8 @@ afterEach(() => {
   lifecycle.failNext = "";
   lifecycle.createCalls = 0;
   lifecycle.encoderDestroyCalls = 0;
+  lifecycle.growOnNextMalloc = false;
+  lifecycle.heapGrew = false;
 });
 
 describe("codec initialization cleanup", () => {
@@ -162,6 +185,52 @@ describe("codec initialization cleanup", () => {
         : encoder.encode(pcm, { maxPacketBytes: 8000 })).toThrow(/WASM malloc failed/);
       expect(decoder.decode(encoder.encode(pcm))).toHaveLength(pcm.length);
       expect(decoder.decode(encoder.encodeFloat(new Float32Array(pcm.length)))).toHaveLength(pcm.length);
+    } finally {
+      encoder.free();
+      decoder.free();
+    }
+  });
+
+  it.each([
+    ["encode", false], ["encodeFloat", false],
+    ["decode", false], ["decodeFloat", false],
+    ["decode", true], ["decodeFloat", true],
+  ] as const)("preserves native %s error labels (packet loss=%s)", async (operation, packetLoss) => {
+    const encoder = await createEncoder();
+    const decoder = await createDecoder();
+    try {
+      const pcm = new Int16Array(1920);
+      const packet = encoder.encode(pcm);
+      lifecycle.failNext = operation;
+      const call = () => operation === "encode" ? encoder.encode(pcm)
+        : operation === "encodeFloat" ? encoder.encodeFloat(new Float32Array(1920))
+        : decoder[operation](packetLoss ? null : packet);
+      const label = packetLoss
+        ? (operation === "decodeFloat" ? "decodePacketLossFloat" : "decodePacketLoss")
+        : operation;
+      expect(call).toThrow(expect.objectContaining({ code: OpusErrorCode.InternalError, operation: label }));
+      const recovered = call();
+      if (operation.startsWith("decode")) expect(recovered).toHaveLength(1920);
+      else expect(recovered.byteLength).toBeGreaterThan(0);
+    } finally {
+      encoder.free();
+      decoder.free();
+    }
+  });
+
+  it("uses current heap views after allocation grows WASM memory", async () => {
+    const encoder = await createEncoder();
+    const decoder = await createDecoder();
+    try {
+      const pcm = new Int16Array(1920);
+      const packet = encoder.encode(pcm);
+      const retained = decoder.decode(packet);
+      const snapshot = retained.slice();
+      lifecycle.growOnNextMalloc = true;
+      const next = encoder.encodeFloat(new Float32Array(1920));
+      expect(lifecycle.heapGrew).toBe(true);
+      expect(decoder.decodeFloat(next)).toHaveLength(1920);
+      expect(retained).toEqual(snapshot);
     } finally {
       encoder.free();
       decoder.free();
