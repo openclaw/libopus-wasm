@@ -114,6 +114,8 @@ export type OpusEncoderHandle = {
   encodeFrames(frames: readonly (Int16Array | Uint8Array)[], options?: EncodeOptions): Uint8Array[];
   encodeFloatFrames(frames: readonly Float32Array[], options?: EncodeOptions): Uint8Array[];
   encoderCtl(request: number, value: number): void;
+  /** Clear stream history while preserving the configured encoder settings. */
+  reset(): void;
   free(): void;
   getBitrate(): number;
   getInDtx(): boolean;
@@ -141,6 +143,8 @@ export type OpusDecoderHandle = {
   decodePacketLoss(frameSize?: number): Int16Array;
   decodePacketLossFloat(frameSize?: number): Float32Array;
   decoderCtl(request: number, value: number): void;
+  /** Clear stream history before decoding an independent stream. */
+  reset(): void;
   free(): void;
   [Symbol.dispose](): void;
 };
@@ -450,6 +454,11 @@ class WasmOpusEncoder implements OpusEncoderHandle {
     this.encoderCtl(EncoderCtl.SetVbrConstraint, enabled ? 1 : 0);
   }
 
+  reset(): void {
+    this.#assertLive();
+    checkOpusResult(this.#module, this.#module._oc_reset_encoder(this.#ptr), "resetEncoder");
+  }
+
   free(): void {
     if (this.#freed) {
       return;
@@ -562,6 +571,11 @@ class WasmOpusDecoder implements OpusDecoderHandle {
       throw new RangeError("decoderCtl only supports integer setter requests");
     }
     checkOpusResult(this.#module, this.#module._oc_decoder_ctl(this.#ptr, request, value), "decoderCtl");
+  }
+
+  reset(): void {
+    this.#assertLive();
+    checkOpusResult(this.#module, this.#module._oc_reset_decoder(this.#ptr), "resetDecoder");
   }
 
   free(): void {

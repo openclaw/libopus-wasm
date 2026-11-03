@@ -8,6 +8,10 @@ void oc_destroy_encoder(OpusEncoder *encoder) {
   opus_encoder_destroy(encoder);
 }
 
+int oc_reset_encoder(OpusEncoder *encoder) {
+  return opus_encoder_ctl(encoder, OPUS_RESET_STATE);
+}
+
 int oc_encode(
   OpusEncoder *encoder,
   const opus_int16 *pcm,
@@ -100,6 +104,10 @@ OpusDecoder *oc_create_decoder(int sample_rate, int channels, int *error) {
 
 void oc_destroy_decoder(OpusDecoder *decoder) {
   opus_decoder_destroy(decoder);
+}
+
+int oc_reset_decoder(OpusDecoder *decoder) {
+  return opus_decoder_ctl(decoder, OPUS_RESET_STATE);
 }
 
 int oc_decode(

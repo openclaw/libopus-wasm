@@ -92,6 +92,28 @@ The CTL codes are the same integers as `@discordjs/opus`; import the
 [`EncoderCtl` / `DecoderCtl`](ctl.md) enums from `libopus-wasm` for readable
 names.
 
+## Prism pipelines
+
+Prism's built-in encoder/decoder loader constructs codecs synchronously. This
+asynchronous adapter cannot be substituted by renaming an npm package.
+Keep Prism's container demuxer and initialize the codec before connecting streams:
+
+```js
+import prism from "prism-media";
+import { pipeline } from "node:stream/promises";
+import { createPacketDecoder } from "./packet-decoder.mjs";
+
+await pipeline(input, new prism.opus.OggDemuxer(),
+  await createPacketDecoder({ sampleRate: 48000, channels: 2 }), output);
+```
+
+Copy [`examples/packet-decoder.mjs`](https://github.com/openclaw/libopus-wasm/blob/main/examples/packet-decoder.mjs)
+into your app. It maps one demuxed packet to PCM and frees the codec on stream
+destruction, including errors. `pnpm test:integrations` checks this path through
+Prism with fragmented Ogg pages and a failing packet. Container pre-skip,
+end trimming, resampling and stream selection remain application concerns.
+The example is not a full Ogg player or a replacement for Prism's codec loader.
+
 ## When to use the main API instead
 
 The adapter trades flexibility for familiarity. If you are writing new code, or

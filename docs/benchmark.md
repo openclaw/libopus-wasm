@@ -44,3 +44,16 @@ separate from the per-commit test run.
 
 - [Building from source](building.md) — produce the build the benchmark runs.
 - [Encoder tuning](encoder-tuning.md) — `complexity` is the main throughput knob.
+
+## Allocation decision
+
+Run `pnpm build && pnpm profile:allocations` to measure the existing owned-output
+API before adding caller-buffer methods. The script reports encode-plus-decode
+p99, observed GC time and returned buffer bytes for 5,000 synthetic 20 ms stereo
+Float32 frames. Returned bytes are not total allocation; GC observations and
+these accelerated loops are not a real-time guarantee.
+
+A Linux x64 / Node 24.19.0 run measured 0.214 ms p99 and 0.797 ms observed GC over
+896 ms, with 7,841 returned bytes per frame. That does not justify an additional
+`encodeInto`/`decodeInto` API in this change. Profile the application's actual
+workload and device before revisiting it.

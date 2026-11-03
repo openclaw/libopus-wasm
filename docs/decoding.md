@@ -97,6 +97,18 @@ Passing an **empty** `Uint8Array` is a different mistake and throws a
 `RangeError` — use `null` (or `decodePacketLoss`) to signal a lost packet, not a
 zero-length buffer.
 
+## Switching streams
+
+Call `decoder.reset()` before processing an independent stream or seeking to a
+new stream boundary. Reset clears codec history without reallocating the handle
+and preserves its configured settings. It does not flush delayed audio or make
+arbitrary packet positions independently decodable. Keep using `free()` at the
+end of the handle's lifetime; resetting a freed handle throws.
+
+```ts
+decoder.reset();
+```
+
 ## Next
 
 - [Packet loss](packet-loss.md) — conceal dropped packets and recover with FEC.

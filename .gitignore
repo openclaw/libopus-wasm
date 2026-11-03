@@ -4,3 +4,6 @@ dist/
 coverage/
 src/generated/libopus.generated.mjs
 *.tsbuildinfo
+
+test-results/
+playwright-report/

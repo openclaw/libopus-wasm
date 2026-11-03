@@ -16,7 +16,7 @@ packets, no Ogg/WebM container layer.
 - **Int16 and Float32 PCM** — use whatever your pipeline already speaks.
 - **Loss-resilient** — in-band FEC and packet-loss concealment.
 - **Tunable** — bitrate, VBR/CBR, complexity, signal, bandwidth, DTX, plus a curated CTL passthrough.
-- **Drop-in `@discordjs/opus` adapter** — same method shape, no node-gyp.
+- **Async `@discordjs/opus`-style adapter** — familiar methods, no node-gyp.
 
 📖 **Full documentation: [libopus-wasm.dev](https://libopus-wasm.dev)**
 
