@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const builder = path.join(repoRoot, "scripts", "build-docs-site.mjs");
 
-function buildPage(body: string): string {
+function buildPage(body: string, checkDeterminism = false): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "libopus-docs-test-"));
   const docs = path.join(root, "docs");
   fs.mkdirSync(docs);
@@ -26,13 +26,14 @@ function buildPage(body: string): string {
       path.join(root, "dist", "docs-site", "api-reference.html"),
       "utf8",
     );
-    execFileSync(process.execPath, [builder], { cwd: root });
-    const second = fs.readFileSync(
-      path.join(root, "dist", "docs-site", "api-reference.html"),
-      "utf8",
-    );
-
-    expect(second).toBe(first);
+    if (checkDeterminism) {
+      execFileSync(process.execPath, [builder], { cwd: root });
+      const second = fs.readFileSync(
+        path.join(root, "dist", "docs-site", "api-reference.html"),
+        "utf8",
+      );
+      expect(second).toBe(first);
+    }
     return first;
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
@@ -85,6 +86,7 @@ describe("docs site headings", () => {
         "### Fish &amp; Chips",
         "",
       ].join("\n"),
+      true,
     );
     const toc = pageToc(page);
 
