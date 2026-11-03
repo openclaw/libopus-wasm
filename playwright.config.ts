@@ -5,7 +5,8 @@ export default defineConfig({
   workers: 1,
   use: { baseURL: "http://127.0.0.1:4181", browserName: "chromium" },
   webServer: {
-    command: "pnpm exec vite --host 127.0.0.1 --port 4181 --strictPort",
+    // Keep Vite in Playwright's process group so teardown also closes its pipes.
+    command: "node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 4181 --strictPort",
     port: 4181,
     reuseExistingServer: false,
   },
