@@ -53,3 +53,6 @@ jobs:
           npm init --yes
           npm install --ignore-scripts --no-audit --no-fund "$RUNNER_TEMP/libopus-wasm.tgz"
           node node_modules/libopus-wasm/scripts/release-smoke.mjs
+      - name: Test installed package in Chromium
+        if: matrix.node == '24.22.1'
+        run: node scripts/browser-smoke.mjs "$RUNNER_TEMP/libopus-consumer"
