@@ -2,8 +2,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type createLibopusModule from "../src/generated/libopus.generated.mjs";
 
 const lifecycle = {
-  failNext: "" as "" | "encoder" | "decoder" | "malloc",
+  failNext: "" as "" | "encoder" | "decoder" | "malloc" | "encoderCtl",
   createCalls: 0,
+  encoderDestroyCalls: 0,
   encoders: new Set<number>(),
   decoders: new Set<number>(),
   cleanup: () => {},
@@ -38,8 +39,17 @@ vi.mock("../src/generated/libopus.generated.mjs", async () => {
         return ptr;
       };
       module._oc_destroy_encoder = (ptr) => {
+        lifecycle.encoderDestroyCalls += 1;
         lifecycle.encoders.delete(ptr);
         destroyEncoder(ptr);
+      };
+      const encoderCtl = module._oc_encoder_ctl.bind(module);
+      module._oc_encoder_ctl = (ptr, request, value) => {
+        if (lifecycle.failNext === "encoderCtl") {
+          lifecycle.failNext = "";
+          return -1;
+        }
+        return encoderCtl(ptr, request, value);
       };
       const createDecoder = module._oc_create_decoder.bind(module);
       const destroyDecoder = module._oc_destroy_decoder.bind(module);
@@ -69,16 +79,34 @@ vi.mock("../src/generated/libopus.generated.mjs", async () => {
   };
 });
 
-const { createEncoder, createDecoder, OpusErrorCode } = await import("../src/index.js");
+const { createEncoder, createDecoder, OpusErrorCode, Signal } = await import("../src/index.js");
 const { OpusEncoder } = await import("../src/discordjs.js");
 
 afterEach(() => {
   lifecycle.cleanup();
   lifecycle.failNext = "";
   lifecycle.createCalls = 0;
+  lifecycle.encoderDestroyCalls = 0;
 });
 
 describe("codec initialization cleanup", () => {
+  it("rejects invalid create-time tuning without allocating a native encoder", async () => {
+    await expect(createEncoder({ complexity: 11 })).rejects.toThrow(RangeError);
+    await expect(createEncoder({ packetLossPercent: 101 })).rejects.toThrow(RangeError);
+    await expect(createEncoder({ signal: 9999 as Signal })).rejects.toThrow(RangeError);
+    expect(lifecycle.createCalls).toBe(0);
+    expect(lifecycle.encoderDestroyCalls).toBe(0);
+    expect(lifecycle.encoders.size).toBe(0);
+  });
+
+  it("destroys the native encoder if a post-create setter fails", async () => {
+    lifecycle.failNext = "encoderCtl";
+    await expect(createEncoder()).rejects.toMatchObject({ code: OpusErrorCode.BadArg });
+    expect(lifecycle.createCalls).toBe(1);
+    expect(lifecycle.encoderDestroyCalls).toBe(1);
+    expect(lifecycle.encoders.size).toBe(0);
+  });
+
   it.each(["encoder", "decoder"] as const)(
     "frees partial adapter initialization when the %s fails",
     async (failure) => {
