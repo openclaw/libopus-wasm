@@ -28,7 +28,7 @@ import {
 | `loadLibopus()` | `Promise<{ version: string }>` | Loads the module and returns the bundled libopus version string. |
 | `createEncoder(options?)` | `Promise<OpusEncoderHandle>` | Creates a raw-packet encoder. See [EncoderOptions](#encoderoptions). |
 | `createDecoder(options?)` | `Promise<OpusDecoderHandle>` | Creates a raw-packet decoder. See [DecoderOptions](#decoderoptions). |
-| `getPacketInfo(packet, options?)` | `Promise<OpusPacketInfo>` | Inspects a raw packet — duration, frames, channels, bandwidth — without decoding. See [Packet inspection](packet-info.md). |
+| `getPacketInfo(packet, options?)` | `Promise<OpusPacketInfo>` | Validates a raw packet and reports duration, frames, channels, and bandwidth. See [Packet inspection](packet-info.md). |
 
 Both factories share one lazily-loaded WASM module, so the first call pays the
 load cost and later calls are cheap.

@@ -71,5 +71,5 @@ a freed one — see [resource cleanup](quickstart.md#3-clean-up-deterministicall
 ## Next
 
 - [Decoding](decoding.md#invalid-packets) — where decode errors come from.
-- [Packet inspection](packet-info.md) — validate a packet without decoding.
+- [Packet inspection](packet-info.md) — validate a packet and read its metadata.
 - [API reference](api-reference.md#errors) — the error surface at a glance.
