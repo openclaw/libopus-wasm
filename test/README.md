@@ -4,10 +4,13 @@ Audited all six test files, the native bindings, build scripts, CI, and package 
 
 | Surface | Decision | Validation |
 | --- | --- | --- |
-| Encoder initialization | Merge duplicate native instrumentation into `codec-create-cleanup.test.ts`; retain validation-before-allocation and cleanup-after-setter-failure cases. | Required: complete Vitest suite on Linux Node 22/24/26. |
+| Encoder initialization | Merge duplicate native instrumentation into `codec-create-cleanup.test.ts`; retain validation-before-allocation and cleanup-after-setter-failure cases. | 51 tests pass on Linux Node 22/24/26 ([#27](https://github.com/openclaw/libopus-wasm/pull/27)). |
 | Packet-size limits | Replace copied sine generator with zero PCM; remove repeated default packet-cap assertion. | Bounds rejection still followed by successful encoding. |
 | Docs fixtures | Build escaping fixture once; retain repeated-build check for deterministic anchors. | Both generated-page assertions remain. |
 | Long frames, CTL bounds, native allocation failures | Retain: protect stack corruption, numeric coercion, and resource ownership regressions. | Real WASM with targeted fault injection where failures cannot be induced reliably. |
-| Native mappings and fixture files | No unused mappings or orphan fixtures found. | JS callers, native exports, and fixture consumers inspected. |
+| Native mappings and fixture files | No unused mappings or orphan fixtures found. | All 18 CTL values match libopus 1.6.1 headers and native switch cases; fixture consumers inspected. |
+| Batch output and FEC | Compare ordered Int16/Float32 output with independent sequential codecs; distinguish FEC from ordinary decoding and concealment. | Real-WASM suite ([#28](https://github.com/openclaw/libopus-wasm/pull/28)). |
+| Packet metadata | Correct the temporary-decoder description; test invariant duration at all five supported output rates. | One encoded packet inspected at each rate ([#28](https://github.com/openclaw/libopus-wasm/pull/28)). |
+| Package consumers and CI | Build once; replace dry-run packing with an isolated tarball install and both public entrypoints. | Linux Node 22/24/26 executes real encode/decode and rejects silent output ([#29](https://github.com/openclaw/libopus-wasm/pull/29)). |
 
-Follow-ups: strengthen batch output checks; exercise the packed package in ordinary CI without redundant WASM builds; cover successful FEC decoding; correct the metadata test/docs claim that validation never decodes.
+The Node suite is not browser E2E coverage. The allocation-failure instrumentation is intentional; ordinary roundtrips cannot verify native cleanup on those failures.
