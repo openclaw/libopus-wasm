@@ -2,10 +2,11 @@
 
 ## Unreleased
 
+## 0.5.0 - 2026-11-03
+
 - Add encoder/decoder `reset()` for independent streams without reallocating codec handles; preserve configured settings.
 - Support module Workers explicitly in the WASM build, with a Chromium-tested AudioWorklet capture/Worker example and a Prism demux-to-PCM example.
 - Add zero-dependency and browser bundle size guards, plus an allocation/latency profiling command. Clarify asynchronous Discord compatibility.
-
 - Resolve canonical URLs relative to each generated page when building nested documentation without a CNAME.
 - Bound encoder scratch capacity to libopus's effective packet budget so large `maxPacketBytes` ceilings cannot exhaust the WebAssembly stack on long frames.
 
