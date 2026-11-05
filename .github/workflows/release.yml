@@ -28,7 +28,7 @@ jobs:
       contents: write
       statuses: read
       id-token: write
-    uses: openclaw/release-workflows/.github/workflows/release-npm-package.yml@v1
+    uses: openclaw/release-workflows/.github/workflows/release-npm-package.yml@a3c83188f344414c993f6a5e4b43f16317ffc6f0
     with:
       version: ${{ inputs.version || github.ref_name }}
       dry_run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
