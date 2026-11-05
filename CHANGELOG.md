@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Pin the reusable npm release workflow so retries find existing drafts and validate every release/asset listing page before writing.
+
 ## 0.5.0 - 2026-11-03
 
 - Add encoder/decoder `reset()` for independent streams without reallocating codec handles; preserve configured settings.
